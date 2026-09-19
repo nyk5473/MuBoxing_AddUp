@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>뮤박싱 — 플레이어</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Sans+KR:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root{
+    /* 몽환적인 우주 컨셉 컬러 팔레트 */
+    --bg: #090710; /* 깊은 우주 배경 */
+    --bg-raised: rgba(30, 25, 45, 0.4); /* 반투명 유리 패널 */
+    --line: rgba(255, 255, 255, 0.08); /* 얇은 빛 경계선 */
+    --ink: #F0E6FF; /* 라벤더 빛 화이트 */
+    --ink-dim: #9A8CAE; /* 어두운 라벤더 */
+    
+    /* 파스텔톤 신비로운 트랙 컬러 */
+    --drums: #8DDFF6; /* 스페이스 민트/시안 */
+    --bass: #98ADDA; /* 인디고 블루 */
+    --chords: #FFD1FF; /* 드림 핑크 */
+    --vocal: #FBF7B8; /* 스텔라 옐로우 */
+    --fx: #C2BBFF; /* 미스틱 라벤더 */
+    
+    --low: #98ADDA; --mid: #FFD1FF; --high: #8DDFF6;
+    --kick: #8DDFF6; --snare: #FFD1FF; --hat: #C2BBFF;
+    
+    /* 그라데이션 및 액센트 */
+    --accent: #BCECFF;
+    --accent-grad: linear-gradient(135deg, #C2BBFF, #F6BEE5, #8DDFF6);
+    --ok: #8DDFF6; --no: #F6BEE5;
+    
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+  *{box-sizing:border-box;}
+  
+  body{ 
+    margin:0; background:var(--bg); color:var(--ink); 
+    font-family:'IBM Plex Sans KR', sans-serif; padding:32px 20px 60px;
+    overflow-x: hidden;
+  }
+
+  /* 우주/오로라 배경 효과 (Ambient Glow) */
+  .ambient-bg {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    z-index: -1; pointer-events: none; overflow: hidden;
+  }
+  .ambient-bg::before {
+    content: ''; position: absolute; top: -20%; left: -10%; width: 70vw; height: 70vw;
+    background: radial-gradient(circle, rgba(194,187,255,0.12) 0%, rgba(0,0,0,0) 60%);
+    border-radius: 50%; filter: blur(60px);
+  }
+  .ambient-bg::after {
+    content: ''; position: absolute; bottom: -20%; right: -10%; width: 60vw; height: 60vw;
+    background: radial-gradient(circle, rgba(246,190,229,0.1) 0%, rgba(0,0,0,0) 60%);
+    border-radius: 50%; filter: blur(60px);
+  }
+
+  .wrap{max-width:980px;margin:0 auto; position: relative; z-index: 1;}
+  .wrap-narrow{max-width:600px;margin:0 auto;}
+
+  /* PAGES */
+  .page{ display:none; animation: fadeIn 0.5s ease-out; }
+  .page.active{ display:block; }
+  
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  
+  /* Stage 1: Song Selection */
+  .hero{ text-align:center; margin-bottom:40px; }
+  .hero .eyebrow{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.12em; color:var(--fx); text-transform:uppercase; margin-bottom:12px; font-weight: 500; }
+  .hero h1{ font-family:'Fraunces', serif; font-weight:600; font-size:52px; margin:0 0 12px; letter-spacing:-0.01em; background: var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero .sub{ color:var(--ink-dim); font-size:15px; line-height:1.8; }
+
+  .preset-songs{ 
+    display:flex; flex-direction:column; background:var(--bg-raised); border:1px solid var(--line); 
+    border-radius:16px; margin:16px 0 32px; overflow:hidden; 
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); box-shadow: var(--glass-shadow); 
+  }
+  .preset-btn{ 
+    background:transparent; border:none; border-bottom:1px solid var(--line); border-radius:0; 
+    padding:16px 20px; cursor:pointer; transition:all .2s ease; text-align:left; 
+    display:flex; align-items:center; gap:16px; position:relative; box-shadow:none;
+  }
+  .preset-btn:last-child { border-bottom:none; }
+  .preset-btn:hover { background:rgba(255,255,255,0.05); }
+  .preset-icon { 
+    width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.05); 
+    display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--fx); flex-shrink:0; transition:all .2s;
+  }
+  .preset-btn:hover .preset-icon { background:var(--accent-grad); color:#090710; transform:scale(1.1); }
+  .preset-info { flex:1; display:flex; flex-direction:column; gap:4px; }
+  .preset-title{ font-family:'Fraunces', serif; font-weight:600; font-size:16.5px; margin:0; color:var(--ink); }
+  .preset-artist{ font-size:12.5px; color:var(--ink-dim); margin:0; }
+
+  .divider{ display:flex; align-items:center; gap:12px; margin:36px 0; }
+  .divider::before, .divider::after{ content:''; flex:1; height:1px; background:linear-gradient(90deg, transparent, var(--line), transparent); }
+  .divider-text{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.1em; }
+
+  .section-label{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--fx); text-transform:uppercase; letter-spacing:.1em; margin:24px 0 16px; font-weight:500; }
+
+  .url-input-group{ display:flex; gap:10px; }
+  #urlInput{ flex:1; background:var(--bg-raised); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:14px 16px; font-family:'IBM Plex Mono', monospace; font-size:13px; backdrop-filter: blur(8px); outline:none; transition:border .2s; }
+  #urlInput:focus { border-color: var(--fx); box-shadow: 0 0 0 3px rgba(194,187,255,0.1); }
+  
+  .btn-load{ 
+    background:var(--accent-grad); color:#090710; border:none; border-radius:12px; padding:14px 22px; 
+    font-size:13px; font-weight:600; cursor:pointer; font-family:'IBM Plex Mono', monospace; 
+    letter-spacing:.04em; white-space:nowrap; transition:all .2s; box-shadow: 0 4px 12px rgba(194,187,255,0.2);
+  }
+  .btn-load:hover{ transform:scale(1.03); box-shadow: 0 6px 16px rgba(194,187,255,0.4); }
+
+  .metadata-inputs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+  .metadata-input{ background:var(--bg-raised); color:var(--ink); border:1px solid var(--line); border-radius:12px; padding:12px 16px; font-family:'IBM Plex Sans KR', sans-serif; font-size:13px; outline:none; backdrop-filter:blur(8px); transition:border .2s;}
+  .metadata-input:focus { border-color: var(--fx); box-shadow: 0 0 0 3px rgba(194,187,255,0.1); }
+  .metadata-input::placeholder{ color:rgba(154, 140, 174, 0.5); }
+
+  .upload-zone{ 
+    background:var(--bg-raised); border:1px dashed rgba(194,187,255,0.3); border-radius:16px; 
+    padding:40px 20px; text-align:center; cursor:pointer; transition:all .3s; 
+    backdrop-filter: blur(12px); box-shadow: var(--glass-shadow);
+  }
+  .upload-zone:hover{ border-color:var(--chords); background:rgba(40, 30, 60, 0.4); box-shadow: 0 8px 32px rgba(255, 209, 255, 0.1); }
+  .upload-zone.drag-over{ border-color:var(--drums); background:rgba(141, 223, 246, 0.1); }
+  .upload-icon{ font-size:36px; margin-bottom:16px; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5)); }
+  .upload-text{ font-size:15px; margin:0; color:var(--ink); }
+  .upload-sub{ font-size:12px; color:var(--ink-dim); margin-top:8px; }
+  #fileInput{ display:none; }
+
+  .msg-error{ background:rgba(246, 190, 229, 0.1); border:1px solid var(--no); color:var(--no); padding:12px 16px; border-radius:10px; margin:12px 0 0; font-size:13px; backdrop-filter:blur(4px); }
+  .msg-ok{ background:rgba(141, 223, 246, 0.1); border:1px solid var(--ok); color:var(--ok); padding:12px 16px; border-radius:10px; margin:12px 0 0; font-size:13px; backdrop-filter:blur(4px); }
+
+  /* Stage 2: Version Selection */
+  .version-select{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin:32px 0; }
+  .version-btn{ 
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:20px; padding:32px 24px; 
+    cursor:pointer; transition:all .3s; text-align:center; color:var(--ink);
+    backdrop-filter: blur(12px); box-shadow: var(--glass-shadow); position: relative; overflow:hidden;
+  }
+  .version-btn::before { content:''; position:absolute; top:0; left:0; width:100%; height:100%; background:var(--accent-grad); opacity:0; transition:opacity .3s ease; z-index:0; }
+  .version-btn:hover{ transform: translateY(-5px); border-color:rgba(255,255,255,0.2); box-shadow: 0 16px 40px rgba(194,187,255,0.15); }
+  .version-btn:hover::before{ opacity:0.05; }
+  .version-btn.selected{ border-color:var(--fx); background:rgba(194,187,255,0.05); box-shadow: 0 0 0 1px var(--fx), var(--glass-shadow); }
+  .version-btn h3{ font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin:0 0 10px; position: relative; z-index:1; }
+  .version-btn p{ font-size:13.5px; color:var(--ink-dim); line-height:1.6; margin:0; position: relative; z-index:1; }
+  
+  .btn-start{ 
+    width:100%; padding:16px; background:var(--accent-grad); color:#090710; border:none; border-radius:12px; 
+    font-size:14px; font-weight:600; cursor:pointer; font-family:'IBM Plex Mono', monospace; 
+    margin-top:24px; letter-spacing:.06em; transition:all .2s; box-shadow: 0 6px 20px rgba(194,187,255,0.25);
+  }
+  .btn-start:hover{ transform:scale(1.02); box-shadow: 0 8px 24px rgba(194,187,255,0.4); }
+
+  /* Stage 3: Player */
+  header{ margin-bottom:24px; position:relative; }
+  h1{ font-family:'Fraunces', serif; font-weight:600; font-size:36px; margin:0 0 6px; letter-spacing:-0.01em; }
+  h2{ font-family:'Fraunces', serif; font-weight:600; font-size:20px; margin:36px 0 16px; color:#fff; }
+  .sub{ color:var(--ink-dim); font-size:15px; line-height:1.6; }
+  .meta{ display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+  .meta span{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--fx); background:rgba(194,187,255,0.1); border:1px solid rgba(194,187,255,0.2); padding:4px 12px; border-radius:20px; backdrop-filter:blur(4px); }
+
+  .header-switcher{ position:absolute; top:0; right:0; display:flex; gap:8px; background:rgba(0,0,0,0.3); padding:4px; border-radius:12px; backdrop-filter:blur(10px); border:1px solid var(--line); }
+  .switcher-btn{ background:transparent; border:none; color:var(--ink-dim); padding:10px 16px; border-radius:8px; font-size:12px; cursor:pointer; font-family:'IBM Plex Mono', monospace; transition:all .2s; font-weight:500; }
+  .switcher-btn:hover{ color:var(--ink); }
+  .switcher-btn.active{ background:var(--accent-grad); color:#090710; box-shadow:0 4px 12px rgba(194,187,255,0.3); }
+
+  .back-btn{ display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.03); border:1px solid var(--line); color:var(--ink); padding:10px 14px; border-radius:10px; font-size:12px; cursor:pointer; margin-bottom:20px; font-family:'IBM Plex Mono', monospace; transition:all .2s; backdrop-filter:blur(8px); }
+  .back-btn:hover{ background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.2); }
+
+  /* Transport bar */
+  .transport{ 
+    display:flex; align-items:center; gap:16px; background:var(--bg-raised); border:1px solid var(--line); 
+    border-radius:16px; padding:16px 20px; margin:20px auto; max-width:600px;
+    backdrop-filter: blur(16px); box-shadow: var(--glass-shadow);
+  }
+  .gp-playbtn{ 
+    flex-shrink:0; width:44px; height:44px; border-radius:50%; border:none; background:var(--accent-grad); 
+    color:#090710; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; 
+    transition:all .2s; box-shadow: 0 4px 12px rgba(194,187,255,0.3); padding-left: 2px;
+  }
+  .gp-playbtn:hover{ transform:scale(1.05); box-shadow: 0 6px 16px rgba(194,187,255,0.5); }
+  .gp-playbtn:disabled{ background:rgba(255,255,255,0.1); color:var(--ink-dim); cursor:wait; box-shadow:none; }
+  .gp-time{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-dim); flex-shrink:0; width:40px; }
+  .gp-time.end{ text-align:right; }
+  .gp-progress-outer{ flex:1; height:10px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; position:relative; cursor:pointer; box-shadow:inset 0 1px 3px rgba(0,0,0,0.5); }
+  .gp-progress-track { width:100%; height:100%; position:relative; pointer-events:none; }
+  .gp-progress-inner{ position:absolute; top:0; left:0; height:100%; width:0%; background:var(--accent-grad); border-radius:5px; pointer-events:none; box-shadow: 0 0 10px rgba(194,187,255,0.5); }
+  
+  .gp-section-wrap { text-align:center; margin-bottom:24px; }
+  .gp-section{ display:inline-block; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--drums); background:rgba(141, 223, 246, 0.1); border:1px solid rgba(141, 223, 246, 0.2); padding:6px 14px; border-radius:20px; white-space:nowrap; letter-spacing:.05em; backdrop-filter:blur(4px);}
+
+  /* Fullscore styles */
+  .tabs{ display:flex; gap:8px; margin:0 0 24px; background:rgba(0,0,0,0.3); border:1px solid var(--line); border-radius:12px; padding:6px; width:fit-content; backdrop-filter:blur(10px); }
+  .tab{ font-family:'IBM Plex Mono', monospace; font-size:12.5px; letter-spacing:.04em; padding:10px 20px; border-radius:8px; cursor:pointer; color:var(--ink-dim); background:transparent; border:none; transition:all .2s; font-weight:500; }
+  .tab.active{ background:rgba(255,255,255,0.1); color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+  .tab:not(.active):hover{ color:var(--ink); background:rgba(255,255,255,0.05); }
+
+  .legend{ display:flex; flex-wrap:wrap; gap:16px; margin:0 0 24px; padding:16px 20px; background:var(--bg-raised); border:1px solid var(--line); border-radius:12px; backdrop-filter:blur(12px); box-shadow:var(--glass-shadow); }
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink); font-weight:500;}
+  .swatch{width:12px; height:12px; border-radius:50%; flex-shrink:0; box-shadow: 0 0 8px currentColor; }
+
+  .board{ background:rgba(30, 25, 45, 0.4); border:1px solid var(--line); border-radius:16px; overflow-x:auto; position:relative; backdrop-filter:blur(12px); box-shadow:var(--glass-shadow); }
+  .board-inner{ position:relative; min-width:600px; }
+  .playhead-track{ position:absolute; top:0; right:0; bottom:0; width:calc(100% - 100px); pointer-events:none; z-index:5; }
+  
+  .ruler{ display:grid; grid-template-columns: 100px 1fr; border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(0,0,0,0.2); }
+  .ruler-label{ padding:12px 16px; font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--fx); display:flex;align-items:flex-end; text-transform:uppercase; letter-spacing:.1em; }
+  .ruler-track{position:relative; height:56px;}
+  .section-mark{ position:absolute; top:0; bottom:0; border-left:1px solid rgba(255,255,255,0.1); font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink); padding:10px 0 0 10px; background:linear-gradient(90deg, rgba(255,255,255,0.02), transparent); transition:background 0.2s;}
+  .section-mark:hover{ background:linear-gradient(90deg, rgba(255,255,255,0.1), transparent); }
+  .section-mark .time{display:block; margin-top:4px; color:var(--ink-dim); font-size:10px;}
+
+  .row{ display:grid; grid-template-columns: 100px 1fr; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .row:last-child{border-bottom:none;}
+  .row-label{ padding:16px; font-size:13px; font-weight:500; color:var(--ink); display:flex; align-items:center; border-right:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.02); }
+  .row-track{position:relative; height:60px; background: repeating-linear-gradient(90deg, transparent, transparent 9.99%, rgba(255,255,255,0.02) 10%); }
+  .seg{ position:absolute; top:10px; bottom:10px; border-radius:6px; display:flex; align-items:center; padding:0 12px; font-size:11.5px; font-weight:600; color:#090710; overflow:hidden; white-space:nowrap; box-shadow:0 2px 10px rgba(0,0,0,0.2); }
+  .seg.ghost{ background:transparent !important; border:1px dashed rgba(255,255,255,0.3); color:var(--ink-dim); box-shadow:none; }
+
+  .playhead{ position:absolute; top:0; bottom:0; width:2px; background:var(--chords); box-shadow:0 0 12px var(--chords); z-index:5; pointer-events:none; transition: left 0.1s linear; }
+  .playhead::before{ content:''; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--chords); box-shadow:0 0 10px var(--chords); }
+
+  .row-track.harmony{height:80px;}
+  .harm-seg{ position:absolute; top:8px; height:30px; border-radius:6px; display:flex; align-items:center; padding:0 12px; font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:600; color:#090710; overflow:hidden; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.3); }
+  .harm-seg.bottom{top:42px;}
+  .harm-match{ position:absolute; bottom:4px; font-size:10px; color:var(--drums); font-family:'IBM Plex Mono', monospace; }
+
+  .freq-cellwrap{ position:absolute; top:0; bottom:0; display:flex; gap:3px; padding:6px; }
+  .freq-col{ flex:1; display:flex; flex-direction:column-reverse; }
+  .freq-bar{ width:100%; border-radius:3px; box-shadow:0 0 6px currentColor; opacity:0.8; }
+
+  .groove-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
+  .groove-card{ background:var(--bg-raised); border:1px solid var(--line); border-radius:16px; padding:20px 24px; backdrop-filter:blur(12px); box-shadow:var(--glass-shadow); }
+  .groove-title{ font-size:14px; font-weight:600; margin-bottom:4px; color:var(--ink); }
+  .groove-sub{ font-size:11.5px; color:var(--fx); margin-bottom:16px; font-family:'IBM Plex Mono', monospace;}
+  .grid16{ display:grid; grid-template-columns:repeat(16,1fr); gap:4px; align-items:end; height:90px; margin-bottom:10px; }
+  .step{ position:relative; height:100%; display:flex; flex-direction:column-reverse; }
+  .hit{ width:100%; border-radius:3px 3px 0 0; box-shadow:0 0 8px currentColor; }
+  .hit.kick{background:var(--kick); color:var(--kick);} .hit.snare{background:var(--snare); color:var(--snare);} .hit.hat{background:var(--hat); color:var(--hat); opacity:.6;}
+  .step-num{ font-family:'IBM Plex Mono', monospace; font-size:9px; color:rgba(255,255,255,0.4); text-align:center; margin-top:4px; }
+  .swing-note{ font-size:12px; color:var(--ink-dim); line-height:1.7; margin-top:12px; }
+  .swing-note b{color:var(--chords);}
+
+  .mix-wrap{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px; }
+  .mix-card{ background:var(--bg-raised); border:1px solid var(--line); border-radius:16px; padding:20px 24px; backdrop-filter:blur(12px); box-shadow:var(--glass-shadow); }
+  .mix-title{ font-size:14px; font-weight:600; margin-bottom:16px; color:var(--ink); }
+  svg.spectrum{ width:100%; height:120px; display:block; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1)); }
+  .mix-legend{ display:flex; gap:16px; margin-top:16px; font-size:11.5px; color:var(--ink); font-weight:500; }
+  .mix-legend span{display:flex; align-items:center; gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%; box-shadow:0 0 6px currentColor;}
+
+  .note-box{ background:rgba(30, 25, 45, 0.6); border:1px solid var(--line); border-radius:12px; padding:18px 24px; margin-top:24px; font-size:13.5px; line-height:1.8; color:var(--ink); backdrop-filter:blur(8px); box-shadow:inset 0 0 20px rgba(0,0,0,0.2); }
+  .note-box b{color:var(--chords); font-weight:600;}
+
+  footer{ margin-top:32px; font-size:12.5px; color:var(--ink-dim); line-height:1.8; text-align:center; }
+
+  .mode-panel{ display:none; animation: fadeIn 0.4s ease-out; } .mode-panel.active{ display:block; }
+
+  /* ========== EARCOPY STYLES ========== */
+  .earcopy-card{ background:var(--bg-raised); border:1px solid var(--line); border-radius:16px; padding:28px 24px; margin-bottom:20px; backdrop-filter:blur(12px); box-shadow:var(--glass-shadow); }
+  .earcopy-card h2{ font-family:'Fraunces', serif; font-weight:600; font-size:18px; margin:0 0 10px; color:#fff; }
+  .earcopy-card .desc{ font-size:13.5px; color:var(--ink-dim); line-height:1.7; margin-bottom:20px; }
+
+  .tap-display{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; background:rgba(0,0,0,0.2); padding:16px 20px; border-radius:12px; border:1px solid rgba(255,255,255,0.05); }
+  .tap-bpm{ font-family:'IBM Plex Mono', monospace; font-size:36px; color:var(--chords); text-shadow: 0 0 16px rgba(255, 209, 255, 0.4); }
+  .tap-bpm .label{ font-size:11.5px; color:var(--ink-dim); display:block; margin-bottom:4px; text-shadow:none; }
+  .tap-diff{ font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:500; }
+  .tapbtn{ width:100%; padding:24px; border:none; border-radius:12px; background:var(--accent-grad); color:#090710; font-size:16px; font-weight:600; font-family:'IBM Plex Mono', monospace; cursor:pointer; letter-spacing:.06em; box-shadow:0 6px 20px rgba(194,187,255,0.3); transition:transform .1s, box-shadow .1s; }
+  .tapbtn:active{ transform:scale(0.97); box-shadow:0 2px 10px rgba(194,187,255,0.2); }
+  .reset-tap{ margin-top:12px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--ink-dim); padding:10px 16px; border-radius:8px; font-size:12px; cursor:pointer; transition:all .2s; }
+  .reset-tap:hover{ background:rgba(255,255,255,0.05); color:var(--ink); }
+
+  .quiz-progress{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--fx); margin-bottom:12px; font-weight:500; letter-spacing:.05em; }
+  .chord-time{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--drums); margin-bottom:4px; }
+  .chord-section{ font-size:14px; color:var(--ink); margin-bottom:20px; font-weight:500; }
+
+  .note-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:10px; }
+  .note-btn{ padding:16px 0; text-align:center; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.4); color:var(--ink); font-family:'IBM Plex Mono', monospace; font-size:14px; cursor:pointer; transition:all .2s; backdrop-filter:blur(4px); }
+  .note-btn:hover{ border-color:var(--fx); box-shadow:0 0 10px rgba(194,187,255,0.2); background:rgba(194,187,255,0.1); }
+  .note-btn.selected{ background:var(--accent-grad); color:#090710; border:none; box-shadow:0 4px 12px rgba(194,187,255,0.3); }
+  .note-btn.correct{ background:var(--ok); color:#090710; border-color:var(--ok); box-shadow:0 0 16px var(--ok); }
+  .note-btn.wrong{ background:transparent; color:var(--no); border-color:var(--no); box-shadow:inset 0 0 10px rgba(246, 190, 229, 0.2); }
+
+  .quality-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:20px; }
+  .quality-btn{ padding:18px 12px; text-align:center; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.4); color:var(--ink); font-size:13.5px; cursor:pointer; transition:all .2s; font-weight:500; backdrop-filter:blur(4px); }
+  .quality-btn:hover{ border-color:var(--fx); box-shadow:0 0 10px rgba(194,187,255,0.2); background:rgba(194,187,255,0.1); }
+  .quality-btn.selected{ background:var(--accent-grad); color:#090710; border:none; box-shadow:0 4px 12px rgba(194,187,255,0.3); }
+  .quality-btn.correct{ background:var(--ok); color:#090710; border-color:var(--ok); box-shadow:0 0 16px var(--ok); }
+  .quality-btn.wrong{ background:transparent; color:var(--no); border-color:var(--no); box-shadow:inset 0 0 10px rgba(246, 190, 229, 0.2); }
+
+  .feedback{ margin-top:20px; padding:16px 20px; border-radius:10px; background:rgba(255,255,255,0.05); font-size:13.5px; line-height:1.7; border:1px solid rgba(255,255,255,0.1); display:none; }
+  .feedback.show{ display:block; animation:fadeIn 0.3s ease; }
+  .feedback b{ font-family:'IBM Plex Mono', monospace; color:var(--chords); font-size:15px; text-shadow:0 0 8px rgba(255,209,255,0.4); }
+  .next-btn{ display:block; width:100%; margin-top:16px; padding:16px; border:none; border-radius:10px; background:var(--accent-grad); color:#090710; font-size:14px; font-weight:600; cursor:pointer; font-family:'IBM Plex Mono', monospace; display:none; box-shadow:0 4px 16px rgba(194,187,255,0.2); transition:transform .2s;}
+  .next-btn:hover{ transform:scale(1.02); }
+  .next-btn.show{ display:block; animation:fadeIn 0.4s ease; }
+
+  .results{ display:none; }
+  .results.show{ display:block; }
+  .score-card{ text-align:center; padding:32px 20px; background:rgba(0,0,0,0.2); border-radius:12px; margin-bottom:24px; border:1px solid rgba(255,255,255,0.05); }
+  .score-num{ font-family:'Fraunces', serif; font-size:56px; font-weight:600; background:var(--accent-grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter:drop-shadow(0 0 12px rgba(194,187,255,0.3)); margin-bottom:8px;}
+  .score-sub{ font-size:13.5px; color:var(--ink-dim); }
+  .answer-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .answer-table th, .answer-table td{ padding:12px 8px; border-bottom:1px solid rgba(255,255,255,0.08); text-align:left; }
+  .answer-table th{ color:var(--fx); font-weight:500; font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .tag-ok{ color:var(--ok); font-weight:500; text-shadow:0 0 8px rgba(141, 223, 246, 0.4); } 
+  .tag-no{ color:var(--no); opacity:0.8; }
+
+  .quiz-view{ display:block; }
+  .quiz-view.hide{ display:none; }
+
+  @media (max-width: 768px){
+    .version-select{ grid-template-columns:1fr; }
+    .header-switcher{ position:static; margin-top:16px; display:inline-flex; }
+  }
+</style>
+</head>
+<body>
+<!-- Ambient Space Effect -->
+<div class="ambient-bg"></div>
+
+<div class="wrap">
+
+  <div class="page active" id="stageSongSelect">
+    <div class="hero">
+      <div class="eyebrow">뮤박싱</div>
+      <h1>곡을 선택하세요</h1>
+      <p class="sub">유튜브 링크를 붙이거나, 저장된 곡을 고르거나, 음악 파일을 드래그드롭해서 시작해요.</p>
+    </div>
+
+    <div class="wrap-narrow">
+      <div class="section-label">기본 레퍼런스</div>
+      <div class="preset-songs">
+        <button class="preset-btn" onclick="selectSong('and_july')">
+          <div class="preset-icon">▶</div>
+          <div class="preset-info">
+            <div class="preset-title">And July</div>
+            <div class="preset-artist">Heize ft. DEAN, DJ Friz</div>
+          </div>
+        </button>
+        <button class="preset-btn" onclick="selectSong('paradise')">
+          <div class="preset-icon">▶</div>
+          <div class="preset-info">
+            <div class="preset-title">PARADISE</div>
+            <div class="preset-artist">MILLIC ft. FANXY CHILD</div>
+          </div>
+        </button>
+        <button class="preset-btn" onclick="selectSong('feel_my_rhythm')">
+          <div class="preset-icon">▶</div>
+          <div class="preset-info">
+            <div class="preset-title">Feel My Rhythm</div>
+            <div class="preset-artist">Red Velvet (레드벨벳)</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- 동적으로 추가되는 내 분석 곡들 (localStorage) -->
+      <div class="section-label" id="customLabel" style="display:none;">
+        내 자동 분석 곡 <button class="clear-btn" style="margin-left:8px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); border-radius:6px; padding:2px 8px; font-size:10px; cursor:pointer;" onclick="clearCustomData()">초기화</button>
+      </div>
+      <div class="preset-songs" id="dynamicPresets" style="margin-bottom:32px; display:none;"></div>
+
+      <div class="divider"><span class="divider-text">또는</span></div>
+
+      <div class="section-label">유튜브 링크 (AI 자동 분석)</div>
+      <div class="metadata-inputs">
+        <input id="urlSongTitle" type="text" placeholder="곡명" class="metadata-input"/>
+        <input id="urlArtist" type="text" placeholder="아티스트명" class="metadata-input"/>
+      </div>
+      <div class="url-input-group">
+        <input id="urlInput" type="text" placeholder="링크 (https://youtube.com/watch?v=...) 또는 videoId"/>
+        <button class="btn-load" onclick="loadFromUrl()">로드</button>
+      </div>
+      <div id="urlMsg"></div>
+
+      <div class="divider"><span class="divider-text">또는</span></div>
+
+      <div class="section-label">음악 파일 (AI 자동 분석)</div>
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">📁</div>
+        <p class="upload-text"><strong>클릭 또는 파일을 드래그</strong></p>
+        <p class="upload-sub">지원: MP3, WAV, M4A (최대 50MB)</p>
+        <input id="fileInput" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm" />
+      </div>
+      <div id="fileMsg"></div>
+    </div>
+  </div>
+
+  <div class="page" id="stageVersionSelect">
+    <div class="hero">
+      <div class="eyebrow">뮤박싱</div>
+      <h1 id="songTitleStage2">And July</h1>
+      <p class="sub" id="songArtistStage2">Heize ft. DEAN, DJ Friz</p>
+    </div>
+
+    <div class="wrap-narrow">
+      <p style="color:var(--ink-dim); margin-bottom:24px; text-align:center;">어떤 모드로 학습하고 싶으신가요?</p>
+
+      <div class="version-select">
+        <div class="version-btn" onclick="selectVersion('fullscore')">
+          <h3>A ver. 풀스코어</h3>
+          <p>이미 분석된 레이어 맵을 보는 모드. 초급 → 고급으로 뎁스를 조절할 수 있어요.</p>
+        </div>
+        <div class="version-btn" onclick="selectVersion('earcopy')">
+          <h3>B ver. 이어카피</h3>
+          <p>직접 곡을 들으면서 레이어와 코드를 맞혀보는 모드.</p>
+        </div>
+      </div>
+
+      <div id="versionMsg" style="text-align:center; height:20px; font-size:12px; color:var(--no); margin-bottom:10px;"></div>
+      <button class="btn-start" id="btnStart" onclick="startVersion()">시작</button>
+    </div>
+  </div>
+
+  <div class="page" id="stagePlayer">
+    <button class="back-btn" onclick="goBackToSong()">← 곡 선택으로</button>
+    
+    <header>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+        <div>
+          <div class="eyebrow">뮤박싱</div>
+          <h1 id="songTitle">And July</h1>
+          <div class="sub" id="songArtist">Heize ft. DEAN, DJ Friz</div>
+          <div class="meta" id="songMeta"></div>
+        </div>
+        <div class="header-switcher">
+          <button class="switcher-btn active" id="btnFullscore" onclick="switchVersion('fullscore')">풀스코어</button>
+          <button class="switcher-btn" id="btnEarcopy" onclick="switchVersion('earcopy')">이어카피</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- YouTube / Local Audio Container (숨김 - 재생바만 사용) -->
+    <div id="ytPlayerContainer" style="width:100%; max-width:640px; margin:0 auto 20px; display:none;">
+      <a id="ytLinkBtn" href="" target="_blank" rel="noopener"
+        style="display:flex; align-items:center; gap:14px; width:100%; padding:20px 24px;
+               border-radius:14px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+               color:var(--ink); text-decoration:none; font-family:'IBM Plex Mono', monospace;
+               font-size:13px; font-weight:500; letter-spacing:.03em; transition:background .2s; cursor:pointer;">
+        <svg width="28" height="20" viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="28" height="20" rx="5" fill="#FF0000"/>
+          <path d="M11.5 5.5l8 4.5-8 4.5V5.5z" fill="white"/>
+        </svg>
+        <div>
+          <div id="ytLinkTitle" style="color:var(--ink); margin-bottom:3px;">유튜브에서 보기</div>
+          <div style="font-size:11px; color:var(--ink-dim);">새 탭에서 열립니다 →</div>
+        </div>
+      </a>
+      <audio id="localAudio" style="width:100%; display:none; margin-top:8px; outline:none;" controls controlsList="nodownload"></audio>
+    </div>
+
+    <!-- Transport Bar -->
+    <div class="transport">
+      <button class="gp-playbtn" id="gpPlayBtn" disabled>
+        <svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><path d="M2 1.5l11 6.5-11 6.5V1.5z"/></svg>
+      </button>
+      <div class="gp-time" id="gpTime">0:00</div>
+      <div class="gp-progress-outer" id="gpProgressOuter">
+        <div class="gp-progress-track">
+          <div class="gp-progress-inner" id="gpProgressInner"></div>
+        </div>
+      </div>
+      <div class="gp-time end" id="gpTimeEnd">0:00</div>
+    </div>
+    
+    <div class="gp-section-wrap">
+      <div class="gp-section" id="gpSectionTag">곡을 재생하면 섹션이 표시돼요</div>
+    </div>
+
+    <!-- A: Fullscore -->
+    <div id="fullscoreContent" class="mode-panel active">
+      <div class="tabs" id="modeTabsA">
+        <button class="tab active" data-mode="basic">초급</button>
+        <button class="tab" data-mode="inter">중급</button>
+        <button class="tab" data-mode="adv">고급</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:var(--drums)"></span>Drums</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--bass)"></span>Bass</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--chords)"></span>Chords</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--vocal)"></span>Vocal</div>
+        <div class="legend-item"><span class="swatch" style="background:var(--fx)"></span>FX / Scratch</div>
+      </div>
+
+      <div class="mode-panel active" id="panel-basic">
+        <div class="board">
+          <div class="board-inner">
+            <div class="ruler"><div class="ruler-label">Section</div><div class="ruler-track" id="ruler-basic"></div></div>
+            <div id="rows-basic"></div>
+            <div class="playhead-track"><div class="playhead" id="playhead-basic" style="left:0%"></div></div>
+          </div>
+        </div>
+        <footer>구간 길이는 BPM 기준으로 보정한 값이에요. <b>상단의 섹션(Intro, Verse 등)을 클릭하면 해당 구간으로 바로 이동해요.</b></footer>
+      </div>
+
+      <div class="mode-panel" id="panel-inter">
+        <div class="board">
+          <div class="board-inner">
+            <div class="ruler"><div class="ruler-label">Section</div><div class="ruler-track" id="ruler-inter"></div></div>
+            <div id="rows-inter"></div>
+            <div class="row"><div class="row-label">Chords<br>(Verse vs Chorus)</div><div class="row-track harmony" id="harmonyTrack"></div></div>
+            <div class="row"><div class="row-label">Freq. Band<br>(Low/Mid/High)</div><div class="row-track" id="freqTrack" style="position:relative;"></div></div>
+            <div class="playhead-track"><div class="playhead" id="playhead-inter" style="left:0%"></div></div>
+          </div>
+        </div>
+        <div class="note-box" id="interNoteBox"><b>보는 법 —</b> 하모니 레인은 벌스와 코러스 코드를 위/아래로 나란히 배치해요. 주파수 밴드는 대역별 믹싱 밸런스를 보여줍니다.</div>
+      </div>
+
+      <div class="mode-panel" id="panel-adv">
+        <div class="board">
+          <div class="board-inner">
+            <div class="ruler"><div class="ruler-label">Section</div><div class="ruler-track" id="ruler-adv"></div></div>
+            <div id="rows-adv"></div>
+            <div class="playhead-track"><div class="playhead" id="playhead-adv" style="left:0%"></div></div>
+          </div>
+        </div>
+
+        <h2>그루브 디테일 — Verse vs Chorus (1 bar)</h2>
+        <div class="groove-wrap">
+          <div class="groove-card">
+            <div class="groove-title">Verse 1 — 킥/스네어 패턴</div>
+            <div class="groove-sub">16th grid · swing ~58%</div>
+            <div class="grid16" id="grooveVerse"></div>
+            <div class="swing-note">짝수 스텝이 살짝 <b>뒤로 밀려</b> 찍혀요 — 붐뱁 특유의 레이드백 느낌.</div>
+          </div>
+          <div class="groove-card">
+            <div class="groove-title">Chorus — 킥/스네어 패턴</div>
+            <div class="groove-sub">16th grid · swing ~52%, velocity ↑</div>
+            <div class="grid16" id="grooveChorus"></div>
+            <div class="swing-note"><b>벨로시티가 전반적으로 높고</b> 스윙은 줄어서 더 곧고 세게 밀어붙이는 인상.</div>
+          </div>
+        </div>
+
+        <h2>믹스 레퍼런스 — 대역별 밸런스</h2>
+        <div class="mix-wrap">
+          <div class="mix-card">
+            <div class="mix-title">Verse — 스펙트럼 스냅샷</div>
+            <svg class="spectrum" viewBox="0 0 300 110" id="specVerse"></svg>
+            <div class="mix-legend"><span><span class="dot" style="background:var(--low)"></span>Low</span><span><span class="dot" style="background:var(--mid)"></span>Mid</span><span><span class="dot" style="background:var(--high)"></span>High</span></div>
+          </div>
+          <div class="mix-card">
+            <div class="mix-title">Chorus — 스펙트럼 스냅샷</div>
+            <svg class="spectrum" viewBox="0 0 300 110" id="specChorus"></svg>
+            <div class="mix-legend"><span><span class="dot" style="background:var(--low)"></span>Low</span><span><span class="dot" style="background:var(--mid)"></span>Mid</span><span><span class="dot" style="background:var(--high)"></span>High</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Earcopy View -->
+    <div id="earcopyContent" style="display:none;">
+      <div class="earcopy-card">
+        <h2>1. 마디 세기 — 탭 템포</h2>
+        <div class="desc">곡을 들으면서 킥이나 스네어 박자에 맞춰 아래 버튼을 4번 이상 눌러보세요. 곡 템포와 얼마나 가까운지 확인할 수 있어요.</div>
+        <div class="tap-display">
+          <div class="tap-bpm"><span class="label">내가 탭한 BPM</span><span id="tapBpm">—</span></div>
+          <div class="tap-diff" id="tapDiff"></div>
+        </div>
+        <button class="tapbtn" id="tapBtn">탭 (스페이스바도 가능)</button>
+        <button class="reset-tap" id="resetTap">초기화</button>
+      </div>
+
+      <div class="earcopy-card quiz-view" id="quizCard">
+        <h2>2–3. 근음 찾기 · 코드 맞히기</h2>
+        <div class="quiz-progress" id="quizProgress">코드 1 / 6</div>
+        <div class="chord-time" id="chordTime"></div>
+        <div class="chord-section" id="chordSectionDesc"></div>
+
+        <div id="rootStage">
+          <div class="desc">이 구간의 <b style="color:var(--ink)">근음(root)</b>을 골라보세요 — 베이스에서 들리는 가장 낮은 음이에요.</div>
+          <div class="note-grid" id="noteGrid"></div>
+        </div>
+
+        <div id="qualityStage" style="display:none;">
+          <div class="desc" style="margin-top:16px;">이제 코드의 <b style="color:var(--ink)">종류</b>를 골라보세요.</div>
+          <div class="quality-grid" id="qualityGrid"></div>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+        <button class="next-btn" id="nextBtn">다음 코드</button>
+      </div>
+
+      <div class="earcopy-card results" id="resultsCard">
+        <div class="score-card">
+          <div class="score-num" id="finalScore">0/12</div>
+          <div class="score-sub">근음 + 코드 종류 합산 정답 수</div>
+        </div>
+        <table class="answer-table">
+          <thead><tr><th>구간</th><th>정답</th><th>근음</th><th>종류</th></tr></thead>
+          <tbody id="answerTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TOTAL_AND_JULY = 229; // 3:49
+const sections_and_july = [
+  {label:'Intro',       start:0,   end:29 },
+  {label:'Verse 1',     start:29,  end:48 },
+  {label:'Pre-chorus 1',start:48,  end:67 },
+  {label:'Chorus 1',    start:68,  end:87 },
+  {label:'Verse 2',     start:88,  end:107},
+  {label:'Pre-chorus 2',start:107, end:126},
+  {label:'Chorus 2',    start:127, end:146},
+  {label:'Bridge',      start:147, end:184},
+  {label:'Chorus 3',    start:185, end:205},
+  {label:'Outro',       start:205, end:229},
+];
+const tracks_and_july = [
+  { name:'Drums', color:'var(--drums)', segs:[
+    {s:0,  e:29,  label:'DJ Friz 스크래치'},
+    {s:29, e:67,  label:'풀 드럼 그루브'},
+    {s:68, e:87,  label:'드럼 풀파워'},
+    {s:88, e:126, label:'벌스2 패턴'},
+    {s:127,e:146, label:'드럼 풀파워'},
+    {s:147,e:184, label:'', ghost:true},
+    {s:185,e:205, label:'드럼 복귀'},
+    {s:205,e:229, label:'페이드 아웃'},
+  ]},
+  { name:'Bass', color:'var(--bass)', segs:[
+    {s:29, e:67,  label:'서브 베이스'},
+    {s:68, e:87,  label:'베이스 유지'},
+    {s:88, e:126, label:'동일 패턴'},
+    {s:127,e:146, label:'베이스 유지'},
+    {s:147,e:184, label:'', ghost:true},
+    {s:185,e:205, label:'베이스 복귀'},
+    {s:205,e:229, label:'페이드'},
+  ]},
+  { name:'Chords', color:'var(--chords)', segs:[
+    {s:0,  e:29,  label:'Dm7 루프'},
+    {s:29, e:48,  label:'Dm7 → Bbmaj7'},
+    {s:48, e:67,  label:'A7b13 (텐션)'},
+    {s:68, e:87,  label:'Fmaj9 → Bb13'},
+    {s:88, e:107, label:'Dm7 → Bbmaj7'},
+    {s:107,e:126, label:'A7b13 (텐션)'},
+    {s:127,e:146, label:'Fmaj9 → Bb13'},
+    {s:147,e:184, label:'Dm9 서스테인'},
+    {s:185,e:205, label:'Fmaj9 → Bb13'},
+    {s:205,e:229, label:'Dm7 페이드'},
+  ]},
+  { name:'Vocal', color:'var(--vocal)', segs:[
+    {s:29, e:48,  label:'Heize 리드'},
+    {s:48, e:67,  label:'Heize + 백보컬'},
+    {s:68, e:87,  label:'Heize 코러스'},
+    {s:88, e:107, label:'DEAN 리드'},
+    {s:107,e:126, label:'DEAN + 백보컬'},
+    {s:127,e:146, label:'콜앤리스폰스'},
+    {s:147,e:184, label:'애드립 / 보컬 레이어'},
+    {s:185,e:205, label:'듀엣 (Heize+DEAN)'},
+    {s:205,e:229, label:'애드립 페이드'},
+  ]},
+  { name:'FX / Scratch', color:'var(--fx)', segs:[
+    {s:0,  e:29,  label:'DJ Friz 스크래치'},
+    {s:205,e:229, label:'스크래치 리턴'},
+  ]},
+];
+
+const TOTAL_PARADISE = 301; // 5:01
+const sections_paradise = [
+  {label:'Intro',        start:0,   end:17 },
+  {label:'Verse 1',      start:17,  end:80 }, // ZICO "Yeah I'm Still Awake"
+  {label:'Pre-chorus',   start:80,  end:98 }, // Crush "Don't know why..."
+  {label:'Chorus',       start:98,  end:130}, // Crush "You're my utopia"
+  {label:'Verse 2a',     start:130, end:175}, // DEAN "어렸을 땐 바랬지"
+  {label:'Verse 2b',     start:175, end:228}, // PENOMECO "내 팽이는 돌고"
+  {label:'Pre-chorus 2', start:228, end:246}, // Crush 재반복
+  {label:'Chorus 2',     start:246, end:278}, // Crush 재반복
+  {label:'Outro',        start:278, end:301}, // 전체 페이드
+];
+const tracks_paradise = [
+  { name:'Drums', color:'var(--drums)', segs:[
+    {s:0,  e:17,  label:'로파이 드럼 인트로'},
+    {s:17, e:80,  label:'붐뱁 + 하이햇 그루브'},
+    {s:80, e:98,  label:'킥 강조 / 빌드업'},
+    {s:98, e:130, label:'코러스 풀비트'},
+    {s:130,e:175, label:'DEAN 파트 — 미니멀'},
+    {s:175,e:228, label:'PENOMECO 파트 — 중간 강도'},
+    {s:228,e:246, label:'킥 강조 / 빌드업'},
+    {s:246,e:278, label:'코러스 풀비트'},
+    {s:278,e:301, label:'페이드아웃', ghost:true},
+  ]},
+  { name:'Bass', color:'var(--bass)', segs:[
+    {s:17, e:80,  label:'묵직한 서브베이스'},
+    {s:80, e:98,  label:'베이스 라인 유지'},
+    {s:98, e:130, label:'서브+신스 레이어'},
+    {s:130,e:175, label:'스타카토 베이스'},
+    {s:175,e:228, label:'베이스 반복'},
+    {s:228,e:246, label:'베이스 유지'},
+    {s:246,e:278, label:'서브+신스 레이어'},
+    {s:278,e:301, label:'', ghost:true},
+  ]},
+  { name:'Chords', color:'var(--chords)', segs:[
+    {s:0,  e:17,  label:'Cm9 E.P 루프'},
+    {s:17, e:80,  label:'Cm9 → Bbmaj7'},
+    {s:80, e:98,  label:'Ebmaj9 → Cm9'},
+    {s:98, e:130, label:'Abmaj7 → Cm9'},
+    {s:130,e:175, label:'Cm9 → Bbmaj7'},
+    {s:175,e:228, label:'Cm9 → Bbmaj7'},
+    {s:228,e:246, label:'Ebmaj9 → Cm9'},
+    {s:246,e:278, label:'Abmaj7 → Cm9'},
+    {s:278,e:301, label:'Cm9 페이드'},
+  ]},
+  { name:'Vocal', color:'var(--vocal)', segs:[
+    {s:17, e:80,  label:'ZICO — "Yeah I\'m Still Awake" 랩'},
+    {s:80, e:98,  label:'Crush — "Don\'t know why..." 프리코러스'},
+    {s:98, e:130, label:'Crush — "You\'re my utopia" 코러스'},
+    {s:130,e:175, label:'DEAN — "어렸을 땐 바랬지" R&B'},
+    {s:175,e:210, label:'PENOMECO — "내 팽이는 돌고" 랩'},
+    {s:210,e:228, label:'PENOMECO — "침대 윈 내 바다" 마무리'},
+    {s:228,e:246, label:'Crush — "Don\'t know why..." 재반복'},
+    {s:246,e:278, label:'Crush — "You\'re my utopia" 재반복'},
+    {s:278,e:301, label:'전체 페이드 / 애드립'},
+  ]},
+  { name:'FX', color:'var(--fx)', segs:[
+    {s:0,  e:17,  label:'LP 노이즈 / 보컬 촙'},
+    {s:80, e:98,  label:'라이저 FX'},
+    {s:228,e:246, label:'라이저 FX'},
+    {s:278,e:301, label:'리버브 테일'},
+  ]},
+];
+
+// FEEL MY RHYTHM Data - Red Velvet (3:13 = 193초)
+const TOTAL_FMR = 218; // 3:38
+const sections_fmr = [
+  {label:'Intro',        start:0,   end:37 },
+  {label:'Verse 1',      start:38,  end:61 },
+  {label:'Pre-chorus 1', start:62,  end:73 },
+  {label:'Chorus 1',     start:74,  end:99 },
+  {label:'Verse 2',      start:100, end:104},
+  {label:'Rap Verse',    start:105, end:117},
+  {label:'Verse 2b',     start:118, end:123},
+  {label:'Pre-chorus 2', start:124, end:135},
+  {label:'Chorus 2',     start:135, end:160},
+  {label:'Bridge',       start:161, end:192},
+  {label:'Chorus 3',     start:193, end:218},
+];
+const tracks_fmr = [
+  { name:'Drums', color:'var(--drums)', segs:[
+    {s:0,   e:37,  label:'', ghost:true},
+    {s:38,  e:61,  label:'가벼운 트랩 비트'},
+    {s:62,  e:73,  label:'스네어 롤 / 빌드업'},
+    {s:74,  e:99,  label:'메인 808 트랩 그루브'},
+    {s:100, e:117, label:'미니멀 / 하이햇'},
+    {s:118, e:135, label:'빌드업'},
+    {s:135, e:160, label:'메인 그루브'},
+    {s:161, e:192, label:'', ghost:true},
+    {s:193, e:218, label:'풀 파워 비트'},
+  ]},
+  { name:'Bass', color:'var(--bass)', segs:[
+    {s:38,  e:61,  label:'스타카토 808 베이스'},
+    {s:62,  e:73,  label:'베이스 다운'},
+    {s:74,  e:99,  label:'묵직한 808 글라이드'},
+    {s:100, e:117, label:'서브 베이스'},
+    {s:118, e:160, label:'808 글라이드'},
+    {s:161, e:192, label:'콘트라베이스 / 첼로'},
+    {s:193, e:218, label:'풀 베이스'},
+  ]},
+  { name:'Chords', color:'var(--chords)', segs:[
+    {s:0,   e:37,  label:'바흐 — G선상의 아리아'},
+    {s:38,  e:73,  label:'D → A/C# → Bm → D/A'},
+    {s:74,  e:99,  label:'G → D/F# → Em → A'},
+    {s:100, e:135, label:'벌스-코러스 진행 반복'},
+    {s:135, e:160, label:'G → D/F# → Em → A'},
+    {s:161, e:192, label:'Bb → C → D (브릿지 전조)'},
+    {s:193, e:218, label:'메인 스트링 + 코러스 진행'},
+  ]},
+  { name:'Vocal', color:'var(--vocal)', segs:[
+    {s:0,   e:37,  label:'웬디, 슬기, 조이'},
+    {s:38,  e:61,  label:'아이린, 슬기, 예리, 웬디'},
+    {s:62,  e:73,  label:'조이, 웬디, 아이린'},
+    {s:74,  e:99,  label:'모두'},
+    {s:100, e:104, label:'조이'},
+    {s:105, e:117, label:'아이린, 예리 (랩)'},
+    {s:118, e:123, label:'슬기'},
+    {s:124, e:135, label:'웬디, 슬기, 조이'},
+    {s:135, e:160, label:'모두'},
+    {s:161, e:192, label:'웬디, 예리, 슬기, 조이'},
+    {s:193, e:218, label:'모두'},
+  ]},
+  { name:'FX', color:'var(--fx)', segs:[
+    {s:0,   e:37,  label:'새소리 / 클래식 노이즈'},
+    {s:62,  e:73,  label:'라이저'},
+    {s:105, e:117, label:'보컬 촙 / 글리치'},
+    {s:161, e:192, label:'오케스트라 스웰'},
+  ]},
+];
+
+let TOTAL = TOTAL_AND_JULY;
+let sections = sections_and_july;
+let tracks = tracks_and_july;
+let tracksBasic = tracks.filter(t=>t.name!=='Chords');
+
+// Global DB
+const SONGS_DB = {
+  and_july: { TOTAL: TOTAL_AND_JULY, sections: sections_and_july, tracks: tracks_and_july },
+  paradise: { TOTAL: TOTAL_PARADISE, sections: sections_paradise, tracks: tracks_paradise },
+  feel_my_rhythm: { TOTAL: TOTAL_FMR, sections: sections_fmr, tracks: tracks_fmr },
+};
+
+const harmonyData = {
+  and_july: {
+    top:    [ {s:0,e:29,label:'Dm7 루프'},{s:29,e:67,label:'Dm7 → Bbmaj7'},{s:88,e:126,label:'Dm7 → Bbmaj7'},{s:147,e:184,label:'Dm9 서스테인'} ],
+    bottom: [ {s:68,e:87,label:'Fmaj9 → Bb13'},{s:127,e:146,label:'Fmaj9 → Bb13'},{s:185,e:205,label:'Fmaj9 → Bb13'} ],
+    freq: {
+      'Intro':[0.15,0.1,0.55],
+      'Verse 1':[0.6,0.65,0.4],
+      'Pre-chorus 1':[0.65,0.75,0.5],
+      'Chorus 1':[0.85,0.8,0.7],
+      'Verse 2':[0.6,0.65,0.4],
+      'Pre-chorus 2':[0.65,0.75,0.5],
+      'Chorus 2':[0.85,0.8,0.7],
+      'Bridge':[0.1,0.5,0.25],
+      'Chorus 3':[0.85,0.8,0.7],
+      'Outro':[0.2,0.3,0.4],
+    },
+    noteText: '벌스~프리코러스~코러스 구조가 2회 반복된 뒤 브릿지로 넘어가는 구조예요. 브릿지(2:27~3:04)에서 베이스/드럼이 빠지며 Dm9 서스테인만 남아요.',
+  },
+  paradise: {
+    top:    [ {s:0,e:17,label:'Cm9 E.P 루프'},{s:17,e:130,label:'Cm9 → Bbmaj7'},{s:175,e:278,label:'Cm9 → Bbmaj7'} ],
+    bottom: [ {s:98,e:130,label:'Abmaj7 → Cm9 (코러스)'},{s:246,e:278,label:'Abmaj7 → Cm9 (코러스)'} ],
+    freq: {
+      'Intro':[0.15,0.1,0.5],
+      'Verse 1':[0.65,0.6,0.4],
+      'Pre-chorus':[0.6,0.75,0.5],
+      'Chorus':[0.85,0.75,0.6],
+      'Verse 2a':[0.5,0.65,0.35],
+      'Verse 2b':[0.6,0.7,0.45],
+      'Pre-chorus 2':[0.6,0.75,0.5],
+      'Chorus 2':[0.85,0.75,0.6],
+      'Outro':[0.2,0.3,0.4],
+    },
+    noteText: 'Cm9 루프가 전곡을 관통해요. 코러스(Abmaj7 추가)에서 공간이 열리는 구조. DEAN 파트는 미니멀, PENOMECO 파트는 에너지가 점층됩니다.',
+  },
+  feel_my_rhythm: {
+    top:    [ {s:0,e:37,label:'G선상의 아리아 (D major)'},{s:38,e:73,label:'D → A/C# → Bm → D/A'},{s:161,e:192,label:'Bb → C → D (브릿지)'} ],
+    bottom: [ {s:74,e:99,label:'G → D/F# → Em → A'},{s:135,e:160,label:'G → D/F# → Em → A'},{s:193,e:218,label:'코러스 풀 스트링'} ],
+    freq: {
+      'Intro':[0.1,0.6,0.8],
+      'Verse 1':[0.5,0.6,0.6],
+      'Pre-chorus 1':[0.4,0.7,0.7],
+      'Chorus 1':[0.85,0.8,0.9],
+      'Verse 2':[0.5,0.5,0.6],
+      'Rap Verse':[0.75,0.5,0.65],
+      'Verse 2b':[0.5,0.6,0.6],
+      'Pre-chorus 2':[0.4,0.7,0.7],
+      'Chorus 2':[0.85,0.8,0.9],
+      'Bridge':[0.3,0.9,0.8],
+      'Chorus 3':[0.9,0.85,0.9],
+    },
+    noteText: '클래식 샘플링(스트링)과 808 트랩 비트의 결합. 인트로(0:00~0:37)에서 G선상의 아리아가 먼저 흐르고 비트가 없어요. 브릿지에서 베이스/드럼이 빠지며 웬디/예리/슬기/조이의 보컬이 극대화돼요.',
+  },
+};
+
+function loadCustomSongs() {
+  const saved = localStorage.getItem('mubaksing_custom');
+  const container = document.getElementById('dynamicPresets');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      container.innerHTML = '';
+      let count = 0;
+      for(const key in parsed) {
+        SONGS_DB[key] = parsed[key].data;
+        harmonyData[key] = parsed[key].harmony;
+        
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.onclick = () => {
+          currentSong = parsed[key].meta;
+          selectSong(key);
+        };
+        btn.innerHTML = `<div class="preset-icon" style="color:var(--vocal); font-weight:600;">AI</div><div class="preset-info"><div class="preset-title">${parsed[key].meta.title}</div><div class="preset-artist">${parsed[key].meta.artist}</div></div>`;
+        container.appendChild(btn);
+        count++;
+      }
+      if(count > 0) {
+        document.getElementById('customLabel').style.display = 'flex';
+        container.style.display = 'flex';
+      } else {
+        container.style.display = 'none';
+      }
+    } catch(e) { console.error('Error loading custom songs', e); }
+  } else {
+    container.style.display = 'none';
+  }
+}
+
+function clearCustomData() {
+  localStorage.removeItem('mubaksing_custom');
+  document.getElementById('dynamicPresets').innerHTML = '';
+  document.getElementById('dynamicPresets').style.display = 'none';
+  document.getElementById('customLabel').style.display = 'none';
+}
+
+function fmt(sec){ const m=Math.floor(sec/60), s=Math.floor(sec%60); return m+':'+String(s).padStart(2,'0'); }
+
+function buildRuler(elId){
+  const el = document.getElementById(elId); if(!el) return; el.innerHTML = '';
+  sections.forEach(sec=>{
+    const m = document.createElement('div'); m.className='section-mark';
+    m.style.left=(sec.start/TOTAL*100)+'%'; m.style.width=((sec.end-sec.start)/TOTAL*100)+'%';
+    m.innerHTML = sec.label+'<span class="time">'+fmt(sec.start)+'</span>';
+    
+    // 구간 클릭 시 해당 시간으로 재생 위치 이동 기능 추가
+    m.style.cursor = 'pointer';
+    m.title = '클릭하면 ' + sec.label + ' 구간으로 이동합니다';
+    m.onclick = () => {
+      if (currentSong.fileUrl) {
+        const audio = document.getElementById('localAudio');
+        audio.currentTime = sec.start;
+        if(audio.paused) audio.play();
+      } else if (ytPlayer && typeof ytPlayer.seekTo === 'function') {
+        ytPlayer.seekTo(sec.start, true);
+        if (!isPlaying) ytPlayer.playVideo();
+      }
+    };
+    
+    el.appendChild(m);
+  });
+}
+
+function buildRows(elId, list){
+  const rowsEl = document.getElementById(elId); if(!rowsEl) return; rowsEl.innerHTML = '';
+  list.forEach(t=>{
+    const row=document.createElement('div'); row.className='row';
+    const label=document.createElement('div'); label.className='row-label'; label.textContent=t.name; row.appendChild(label);
+    const trackEl=document.createElement('div'); trackEl.className='row-track';
+    t.segs.forEach(seg=>{
+      const b=document.createElement('div'); b.className='seg'+(seg.ghost?' ghost':'');
+      b.style.left=(seg.s/TOTAL*100)+'%'; b.style.width=((seg.e-seg.s)/TOTAL*100)+'%';
+      if(!seg.ghost) b.style.background=t.color;
+      b.textContent=seg.label||''; b.title=(seg.label||'브레이크')+' · '+fmt(seg.s)+'–'+fmt(seg.e);
+      trackEl.appendChild(b);
+    });
+    row.appendChild(trackEl); rowsEl.appendChild(row);
+  });
+}
+
+function buildHarmonyAndFreq(songId){
+  const data = harmonyData[songId] || { top:[], bottom:[], freq:{}, noteText:'AI 자동 분석 모드입니다.' };
+  const T = SONGS_DB[songId] ? SONGS_DB[songId].TOTAL : TOTAL;
+  const secs = SONGS_DB[songId] ? SONGS_DB[songId].sections : sections;
+
+  const harmonyTrack = document.getElementById('harmonyTrack');
+  if(harmonyTrack){
+    harmonyTrack.innerHTML = '';
+    data.top.forEach(seg=>{
+      const b=document.createElement('div'); b.className='harm-seg';
+      b.style.left=(seg.s/T*100)+'%'; b.style.width=((seg.e-seg.s)/T*100)+'%';
+      b.style.background='var(--chords)'; b.textContent=seg.label; harmonyTrack.appendChild(b);
+    });
+    data.bottom.forEach(seg=>{
+      const b=document.createElement('div'); b.className='harm-seg bottom';
+      b.style.left=(seg.s/T*100)+'%'; b.style.width=((seg.e-seg.s)/T*100)+'%';
+      b.style.background='#c4b8e0'; b.textContent=seg.label; harmonyTrack.appendChild(b);
+    });
+  }
+
+  const freqTrack = document.getElementById('freqTrack');
+  if(freqTrack){
+    freqTrack.innerHTML = ''; freqTrack.style.height='56px';
+    const colorArr = ['var(--low)','var(--mid)','var(--high)'];
+    secs.forEach(sec=>{
+      const vals = data.freq[sec.label] || [0.3, 0.3, 0.3];
+      const wrap = document.createElement('div'); wrap.className='freq-cellwrap';
+      wrap.style.left=(sec.start/T*100)+'%'; wrap.style.width=((sec.end-sec.start)/T*100)+'%';
+      vals.forEach((v,i)=>{
+        const col=document.createElement('div'); col.className='freq-col';
+        const bar=document.createElement('div'); bar.className='freq-bar';
+        bar.style.height=(v*100)+'%'; bar.style.background=colorArr[i];
+        col.appendChild(bar); wrap.appendChild(col);
+      });
+      freqTrack.appendChild(wrap);
+    });
+  }
+  const noteBox = document.getElementById('interNoteBox');
+  if(noteBox) noteBox.innerHTML = '<b>보는 법 —</b> ' + data.noteText;
+}
+
+function setSongData(songId){
+  if(!SONGS_DB[songId]) return;
+  const songData = SONGS_DB[songId];
+  TOTAL = songData.TOTAL;
+  sections = songData.sections;
+  tracks = songData.tracks;
+  tracksBasic = tracks.filter(t=>t.name!=='Chords');
+  
+  buildRuler('ruler-basic'); buildRows('rows-basic', tracksBasic);
+  buildRuler('ruler-inter'); buildRows('rows-inter', tracks);
+  buildRuler('ruler-adv'); buildRows('rows-adv', tracksBasic);
+  
+  buildHarmonyAndFreq(songId);
+}
+
+let currentSong = null;
+let selectedVersion = null;
+
+function showStage(stageName){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(stageName).classList.add('active');
+}
+
+function selectSong(songId){
+  if(songId === 'and_july') currentSong = { id:'and_july', title:'And July', artist:'Heize ft. DEAN, DJ Friz', youtubeId:'rCeM57e2BfU', duration:'3:46' };
+  else if(songId === 'paradise') currentSong = { id:'paradise', title:'PARADISE', artist:'MILLIC ft. FANXY CHILD', youtubeId:'NyVqm1yWKGU', duration:'5:01' };
+  else if(songId === 'feel_my_rhythm') currentSong = { id:'feel_my_rhythm', title:'Feel My Rhythm', artist:'Red Velvet (레드벨벳)', youtubeId:'R9At2ICm4LQ', duration:'3:38' };
+  // If custom song, it's set by the button click
+
+  // 버전선택 단계 스킵 → 즉시 플레이어로
+  selectedVersion = 'fullscore';
+  if(currentSong && currentSong.id) setSongData(currentSong.id);
+  loadPlayerUI();
+  showStage('stagePlayer');
+  // 풀스코어 기본 활성화
+  switchVersion('fullscore');
+  setupMedia();
+}
+
+function selectVersion(ver){
+  selectedVersion = ver;
+  document.querySelectorAll('.version-btn').forEach(b => b.classList.remove('selected'));
+  event.target.closest('.version-btn').classList.add('selected');
+  document.getElementById('versionMsg').textContent = '';
+}
+
+function startVersion(){
+  // 이제 selectSong()에서 직접 플레이어로 넘어가므로 이 함수는 버전선택 페이지에서만 쓰임
+  if(!selectedVersion){ 
+    document.getElementById('versionMsg').textContent = '학습 모드를 먼저 선택해주세요!'; 
+    return; 
+  }
+  
+  if(currentSong && currentSong.id) setSongData(currentSong.id);
+  loadPlayerUI();
+  showStage('stagePlayer');
+  switchVersion(selectedVersion);
+  setupMedia();
+}
+
+function switchVersion(ver){
+  selectedVersion = ver;
+  document.getElementById('btnFullscore').classList.toggle('active', ver === 'fullscore');
+  document.getElementById('btnEarcopy').classList.toggle('active', ver === 'earcopy');
+  document.getElementById('fullscoreContent').style.display = ver === 'fullscore' ? 'block' : 'none';
+  document.getElementById('earcopyContent').style.display = ver === 'earcopy' ? 'block' : 'none';
+  if(ver === 'earcopy' && !document.getElementById('quizCard').classList.contains('initialized')){
+    chordIdx = 0; earcopyScore = 0; loadChord(); document.getElementById('quizCard').classList.add('initialized');
+  }
+}
+
+function goBackToSong(){
+  selectedVersion = null;
+  if (ytPlayer && ytPlayer.destroy) {
+    ytPlayer.destroy();
+    ytPlayer = null;
+  }
+  const localAudio = document.getElementById('localAudio');
+  if(localAudio) { localAudio.pause(); localAudio.currentTime = 0; }
+  if(animFrameId) cancelAnimationFrame(animFrameId);
+  isPlaying = false;
+  document.getElementById('gpPlayBtn').textContent = '▶';
+  
+  // Refresh custom songs list
+  loadCustomSongs();
+  showStage('stageSongSelect');
+}
+
+document.getElementById('modeTabsA').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab'); if(!btn) return;
+  document.getElementById('modeTabsA').querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  ['basic','inter','adv'].forEach(m=>document.getElementById('panel-'+m).classList.remove('active'));
+  document.getElementById('panel-'+btn.dataset.mode).classList.add('active');
+});
+
+function loadPlayerUI(){
+  document.getElementById('songTitle').textContent = currentSong.title;
+  document.getElementById('songArtist').textContent = currentSong.artist;
+  if(currentSong.youtubeId) {
+    document.getElementById('songMeta').innerHTML = '<span>유튜브</span><span>'+currentSong.duration+'</span>';
+  } else if(currentSong.fileUrl) {
+    document.getElementById('songMeta').innerHTML = '<span>로컬 파일</span><span>'+currentSong.duration+'</span>';
+  } else {
+    document.getElementById('songMeta').innerHTML = '<span>커스텀 오디오</span>';
+  }
+  document.getElementById('gpTimeEnd').textContent = currentSong.duration || '0:00';
+  document.getElementById('gpProgressInner').style.width = '0%';
+  document.getElementById('gpTime').textContent = '0:00';
+}
+
+let ytPlayer = null;
+let ytReady = false;
+let isPlaying = false;
+let animFrameId = null;
+
+function loadYouTubeAPI() {
+  if (window.YT && window.YT.Player) { ytReady = true; return; }
+  const tag = document.createElement('script');
+  tag.src = "https://www.youtube.com/iframe_api";
+  const firstScriptTag = document.getElementsByTagName('script')[0];
+  firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+}
+window.onYouTubeIframeAPIReady = function() { ytReady = true; };
+loadYouTubeAPI();
+
+function setupMedia(){
+  const container = document.getElementById('ytPlayerContainer');
+  const localAudio = document.getElementById('localAudio');
+
+  if(!currentSong || (!currentSong.youtubeId && !currentSong.fileUrl)){
+    container.style.display = 'none'; return;
+  }
+
+  container.style.display = 'block';
+
+  if(currentSong.fileUrl){
+    document.getElementById('ytLinkBtn').style.display = 'none';
+    localAudio.style.display = 'block';
+    localAudio.src = currentSong.fileUrl;
+    return;
+  }
+
+  // 유튜브 — 링크 버튼
+  localAudio.style.display = 'none';
+  const btn = document.getElementById('ytLinkBtn');
+  btn.style.display = 'flex';
+  btn.href = `https://www.youtube.com/watch?v=${currentSong.youtubeId}`;
+  document.getElementById('ytLinkTitle').textContent = `${currentSong.title} — 유튜브에서 보기`;
+}
+
+function playIcon()  { return `<svg width="14" height="16" viewBox="0 0 14 16" fill="currentColor"><path d="M2 1.5l11 6.5-11 6.5V1.5z"/></svg>`; }
+function pauseIcon() { return `<svg width="12" height="16" viewBox="0 0 12 16" fill="currentColor"><rect x="0" y="0" width="4" height="16" rx="1"/><rect x="8" y="0" width="4" height="16" rx="1"/></svg>`; }
+
+function onPlayerReady(event){
+  const playBtn = document.getElementById('gpPlayBtn');
+  playBtn.disabled = false;
+  playBtn.innerHTML = playIcon();
+  const dur = ytPlayer.getDuration();
+  if(dur > 0) document.getElementById('gpTimeEnd').textContent = fmt(dur);
+}
+
+function onPlayerStateChange(event){
+  const playBtn = document.getElementById('gpPlayBtn');
+  if(event.data === YT.PlayerState.PLAYING){
+    isPlaying = true; playBtn.innerHTML = pauseIcon();
+    cancelAnimationFrame(animFrameId); updatePlayerLoop();
+  } else {
+    isPlaying = false; playBtn.innerHTML = playIcon();
+    cancelAnimationFrame(animFrameId);
+  }
+}
+
+// Transport Controls
+document.getElementById('gpPlayBtn').addEventListener('click', () => {
+  if(currentSong && currentSong.fileUrl){
+    const audio = document.getElementById('localAudio');
+    if(audio.paused) audio.play(); else audio.pause();
+    return;
+  }
+  if(!ytPlayer || typeof ytPlayer.getPlayerState !== 'function') return;
+  const state = ytPlayer.getPlayerState();
+  if(state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+  else ytPlayer.playVideo();
+});
+
+function updatePlayerLoop() {
+  if (!isPlaying) return;
+  let currentTime = 0, duration = TOTAL;
+
+  if (currentSong.fileUrl) {
+    const audio = document.getElementById('localAudio');
+    currentTime = audio.currentTime; duration = audio.duration || TOTAL;
+  } else if (ytPlayer && typeof ytPlayer.getCurrentTime === 'function') {
+    currentTime = ytPlayer.getCurrentTime(); duration = ytPlayer.getDuration() || TOTAL;
+  }
+  
+  const uiPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const scorePercent = TOTAL > 0 ? (currentTime / TOTAL) * 100 : 0;
+  
+  document.getElementById('gpTime').textContent = fmt(currentTime);
+  document.getElementById('gpProgressInner').style.width = Math.min(uiPercent, 100) + '%';
+  
+  ['basic', 'inter', 'adv'].forEach(m => {
+    const ph = document.getElementById('playhead-' + m);
+    if(ph) ph.style.left = Math.min(scorePercent, 100) + '%';
+  });
+
+  const currentSec = sections.find(s => currentTime >= s.start && currentTime < s.end);
+  document.getElementById('gpSectionTag').textContent = currentSec ? currentSec.label : '...';
+
+  animFrameId = requestAnimationFrame(updatePlayerLoop);
+}
+
+document.getElementById('gpProgressOuter').addEventListener('click', (e) => {
+  const rect = e.currentTarget.getBoundingClientRect();
+  let percent = (e.clientX - rect.left) / rect.width;
+  percent = Math.max(0, Math.min(1, percent));
+  
+  if (currentSong.fileUrl) {
+    const audio = document.getElementById('localAudio');
+    const dur = audio.duration || TOTAL;
+    audio.currentTime = percent * dur;
+    if(audio.paused) audio.play();
+  } else if (ytPlayer && typeof ytPlayer.getDuration === 'function') {
+    const dur = ytPlayer.getDuration() || TOTAL;
+    ytPlayer.seekTo(percent * dur, true);
+    if (!isPlaying) ytPlayer.playVideo();
+  }
+  document.getElementById('gpProgressInner').style.width = (percent * 100) + '%';
+});
+
+function extractVideoId(input){
+  if(!input) return null;
+  const patterns = [ /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/, /^([a-zA-Z0-9_-]{11})$/ ];
+  for(const p of patterns){ const m = input.match(p); if(m) return m[1]; }
+  return null;
+}
+
+// Improved Heuristic based on 4-bar / 8-bar snapping (approx 120BPM)
+function generateAutoAnalysis(N) {
+  let current = 0;
+  const secs = [];
+  // Typical structure chunk sizes (in seconds)
+  const blocks = [
+    { label:'Intro', d: 16 }, { label:'Verse 1', d: 32 }, { label:'Pre-chorus', d: 16 },
+    { label:'Chorus 1', d: 32 }, { label:'Verse 2', d: 32 }, { label:'Chorus 2', d: 32 },
+    { label:'Bridge', d: 16 }, { label:'Outro', d: 32 }
+  ];
+  
+  for(let b of blocks) {
+    if(current >= N - 5) break;
+    let end = current + b.d;
+    if (end > N - 10) end = N; // snap to end if close
+    secs.push({ label: b.label, start: current, end: end });
+    current = end;
+  }
+  if(current < N && secs.length > 0) secs[secs.length-1].end = N;
+
+  const tracks = [
+    {name:'Drums', color:'var(--drums)', segs:[]}, {name:'Bass', color:'var(--bass)', segs:[]},
+    {name:'Chords', color:'var(--chords)', segs:[]}, {name:'Vocal', color:'var(--vocal)', segs:[]},
+    {name:'FX', color:'var(--fx)', segs:[]}
+  ];
+  
+  const freqMap = {};
+  const topHarm = [], bottomHarm = [];
+  
+  secs.forEach(s => {
+    // Fill drums (ghost in Bridge)
+    if(s.label === 'Bridge') tracks[0].segs.push({s:s.start, e:s.end, label:'비트 드롭', ghost:true});
+    else tracks[0].segs.push({s:s.start, e:s.end, label:'자동 추출 루프'});
+    
+    // Fill bass (none in Intro)
+    if(s.label !== 'Intro') tracks[1].segs.push({s:s.start, e:s.end, label:'베이스 라인'});
+    
+    // Fill chords
+    tracks[2].segs.push({s:s.start, e:s.end, label:'코드 추론 영역'});
+    
+    // Fill vocal (none in Intro/Outro)
+    if(!['Intro','Outro'].includes(s.label)) tracks[3].segs.push({s:s.start, e:s.end, label:'보컬 구간'});
+    
+    // FX
+    if(['Intro','Bridge','Outro'].includes(s.label)) tracks[4].segs.push({s:s.start, e:s.end, label:'공간감 FX'});
+    
+    // Frequencies
+    if(s.label.includes('Chorus')) freqMap[s.label] = [0.8, 0.8, 0.7];
+    else if(s.label === 'Bridge') freqMap[s.label] = [0.2, 0.6, 0.4];
+    else freqMap[s.label] = [0.5, 0.6, 0.4];
+    
+    // Harmony Top
+    topHarm.push({s:s.start, e:s.end, label:'AI 추정 진행'});
+    if(s.label.includes('Chorus')) bottomHarm.push({s:s.start, e:s.end, label:'코러스 변화 감지'});
+  });
+
+  return {
+    data: { TOTAL: N, sections: secs, tracks: tracks },
+    harmony: { top: topHarm, bottom: bottomHarm, freq: freqMap, noteText: '이 분석은 뮤박싱 AI가 파형과 메타데이터를 기반으로 예측한 자동 추론 결과입니다.' }
+  };
+}
+
+function loadFromUrl(){
+  const input = document.getElementById('urlInput').value.trim();
+  const videoId = extractVideoId(input);
+  const msg = document.getElementById('urlMsg');
+  if(!videoId){ msg.innerHTML = '<div class="msg-error">유튜브 링크나 videoId가 올바르지 않아요.</div>'; return; }
+  
+  const title = document.getElementById('urlSongTitle').value.trim() || '유튜브 영상 분석';
+  const artist = document.getElementById('urlArtist').value.trim() || 'AI 추출 아티스트';
+  const N = 210; // Default estimation for URL without length
+  
+  const tempId = 'custom_' + Date.now();
+  const analysis = generateAutoAnalysis(N);
+  const meta = { id: tempId, title, artist, youtubeId: videoId, duration: fmt(N), TOTAL: N };
+  
+  saveToLocalStorage(tempId, analysis, meta);
+  
+  msg.innerHTML = '<div class="msg-ok">✓ 영상 분석 완료! (브라우저에 데이터가 저장됨)</div>';
+  setTimeout(()=> { selectSong(tempId); }, 1000);
+}
+
+const uploadZone = document.getElementById('uploadZone');
+const fileInput  = document.getElementById('fileInput');
+uploadZone.addEventListener('click', ()=> fileInput.click());
+uploadZone.addEventListener('dragover', e=>{ e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', ()=> uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e=>{ e.preventDefault(); uploadZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e=> handleFile(e.target.files[0]));
+
+function handleFile(file){
+  const msg = document.getElementById('fileMsg');
+  if(!file) return;
+  if(file.size > 50*1024*1024){ msg.innerHTML='<div class="msg-error">파일이 50MB를 초과해요.</div>'; return; }
+  
+  msg.innerHTML = '<div style="margin-top:12px; font-size:12px; color:var(--accent);">음원 파일 AI 분석 중... 🎵</div>';
+  const name = file.name.replace(/\.[^.]+$/, '');
+  const url  = URL.createObjectURL(file);
+  
+  const audio = new Audio(url);
+  audio.onloadedmetadata = () => {
+    const N = Math.floor(audio.duration);
+    const tempId = 'file_' + Date.now();
+    const analysis = generateAutoAnalysis(N);
+    const meta = { id:tempId, title:name, artist:'로컬 오디오 (AI 분석)', fileUrl:url, youtubeId:null, duration:fmt(N), TOTAL:N };
+    
+    // Save to local storage for persistence
+    saveToLocalStorage(tempId, analysis, meta);
+    
+    msg.innerHTML = '<div class="msg-ok">✓ '+file.name+' 분석 완료 및 데이터 생성됨!</div>';
+    setTimeout(()=> { selectSong(tempId); }, 1000);
+  };
+  audio.onerror = () => { msg.innerHTML='<div class="msg-error">파일을 읽을 수 없습니다.</div>'; };
+}
+
+function saveToLocalStorage(id, analysis, meta) {
+  // Update running memory
+  SONGS_DB[id] = analysis.data;
+  harmonyData[id] = analysis.harmony;
+  currentSong = meta;
+  
+  // Exclude fileUrl from local storage since Blob URLs expire
+  const storageMeta = { ...meta, fileUrl: null }; 
+  
+  let saved = localStorage.getItem('mubaksing_custom');
+  let parsed = saved ? JSON.parse(saved) : {};
+  parsed[id] = { data: analysis.data, harmony: analysis.harmony, meta: storageMeta };
+  localStorage.setItem('mubaksing_custom', JSON.stringify(parsed));
+  
+  loadCustomSongs(); // Refresh UI
+}
+
+// Generate static grooves for 'adv' tab
+function buildGroove(elId, pattern, swingPct){
+  const el = document.getElementById(elId); if(!el) return; el.innerHTML='';
+  for(let i=0;i<16;i++){
+    const step=document.createElement('div'); step.className='step';
+    if(i%2===1) step.style.marginLeft=((swingPct-50)/50*8)+'px';
+    const hitData = pattern[i];
+    if(hitData){ const hit=document.createElement('div'); hit.className='hit '+hitData.type; hit.style.height=(hitData.vel*100)+'%'; step.appendChild(hit); }
+    const num=document.createElement('div'); num.className='step-num'; num.textContent=i+1;
+    el.appendChild(step); el.appendChild(num);
+  }
+}
+const versePattern = { 0:{type:'kick',vel:0.75},2:{type:'hat',vel:0.3},4:{type:'snare',vel:0.7},6:{type:'hat',vel:0.25},8:{type:'kick',vel:0.55},10:{type:'hat',vel:0.3},12:{type:'snare',vel:0.7},14:{type:'hat',vel:0.3} };
+const chorusPattern = { 0:{type:'kick',vel:0.9},2:{type:'hat',vel:0.4},4:{type:'snare',vel:0.9},6:{type:'hat',vel:0.35},8:{type:'kick',vel:0.85},9:{type:'kick',vel:0.4},10:{type:'hat',vel:0.4},12:{type:'snare',vel:0.95},14:{type:'hat',vel:0.4} };
+buildGroove('grooveVerse', versePattern, 58); buildGroove('grooveChorus', chorusPattern, 52);
+
+function buildSpectrum(svgId, lowCurve, midCurve, highCurve){
+  const svg = document.getElementById(svgId);
+  if(!svg) return;
+  const w = 300, h = 110;
+  function pathFor(vals){
+    const step = w / (vals.length - 1);
+    let d = 'M0,' + (h - vals[0] * h);
+    vals.forEach((v,i) => { if(i>0) d += ' L' + (i * step) + ',' + (h - v * h); });
+    d += ' L' + w + ',' + h + ' L0,' + h + ' Z';
+    return d;
+  }
+  
+  // 몽환적 우주 테마 파스텔 색상 적용
+  const cLow = '#98ADDA';  // var(--low)
+  const cMid = '#FFD1FF';  // var(--mid)
+  const cHigh = '#8DDFF6'; // var(--high)
+
+  // SVG 내부에 패스(Path)를 생성하여 그래프 렌더링
+  svg.innerHTML =
+    '<path d="' + pathFor(lowCurve) + '" fill="' + cLow + '" opacity="0.65" style="mix-blend-mode: screen; filter: drop-shadow(0 0 4px ' + cLow + ');"></path>'+
+    '<path d="' + pathFor(midCurve) + '" fill="' + cMid + '" opacity="0.6" style="mix-blend-mode: screen; filter: drop-shadow(0 0 4px ' + cMid + ');"></path>'+
+    '<path d="' + pathFor(highCurve) + '" fill="' + cHigh + '" opacity="0.8" style="mix-blend-mode: screen; filter: drop-shadow(0 0 4px ' + cHigh + ');"></path>';
+}
+
+// Verse: 보컬(Mid)이 두드러지고 Low/High가 상대적으로 얌전함
+buildSpectrum('specVerse', 
+  [0.4, 0.45, 0.5, 0.45, 0.4, 0.4], 
+  [0.55, 0.65, 0.7, 0.68, 0.6, 0.55], 
+  [0.35, 0.4, 0.4, 0.38, 0.35, 0.3]
+);
+
+// Chorus: 킥/베이스(Low)와 하이햇/FX(High)가 넓게 확장됨
+buildSpectrum('specChorus', 
+  [0.75, 0.8, 0.85, 0.8, 0.78, 0.75], 
+  [0.45, 0.5, 0.55, 0.5, 0.48, 0.45], 
+  [0.6, 0.65, 0.7, 0.65, 0.6, 0.55]
+);
+
+const ACTUAL_BPM = 99;
+let tapTimes = [];
+const tapBtn = document.getElementById('tapBtn');
+const tapBpmEl = document.getElementById('tapBpm');
+const tapDiffEl = document.getElementById('tapDiff');
+
+function registerTap(){
+  const now = performance.now(); tapTimes.push(now);
+  if(tapTimes.length > 8) tapTimes.shift();
+  if(tapTimes.length >= 2){
+    const intervals = [];
+    for(let i=1;i<tapTimes.length;i++) intervals.push(tapTimes[i]-tapTimes[i-1]);
+    const avgMs = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+    const bpm = Math.round(60000/avgMs);
+    tapBpmEl.textContent = bpm;
+    const diff = bpm - ACTUAL_BPM;
+    tapDiffEl.textContent = diff===0 ? '정확해요!' : (diff>0 ? '+'+diff+' (빠름)' : diff+' (느림)');
+    tapDiffEl.style.color = Math.abs(diff)<=3 ? 'var(--ok)' : 'var(--ink-dim)';
+  }
+}
+tapBtn.addEventListener('click', registerTap);
+document.addEventListener('keydown', (e)=>{ if(e.code==='Space' && !e.target.matches('button') && selectedVersion==='earcopy'){ e.preventDefault(); registerTap(); }});
+document.getElementById('resetTap').addEventListener('click', ()=>{ tapTimes=[]; tapBpmEl.textContent='—'; tapDiffEl.textContent=''; });
+
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const QUALITIES = [
+  {id:'maj', label:'메이저 (Major/maj7)'}, {id:'min', label:'마이너 (minor/m7)'},
+  {id:'dom', label:'도미넌트 7th (7/9/13)'}, {id:'dim', label:'디미니시드 / 기타'},
+];
+const chords = [
+  {time:'0:00–0:29', section:'Intro',        chordName:'Dm7',    root:'D',  quality:'min'},
+  {time:'0:29–0:48', section:'Verse 1',      chordName:'Bbmaj7', root:'A#', quality:'maj'},
+  {time:'0:48–1:07', section:'Pre-chorus 1', chordName:'A7b13',  root:'A',  quality:'dom'},
+  {time:'1:08–1:27', section:'Chorus 1',     chordName:'Fmaj9',  root:'F',  quality:'maj'},
+  {time:'1:28–1:47', section:'Verse 2',      chordName:'Dm7',    root:'D',  quality:'min'},
+  {time:'2:27–3:04', section:'Bridge',       chordName:'Dm9',    root:'D',  quality:'min'},
+];
+
+let chordIdx = 0, rootAnswer = null, qualityAnswer = null, earcopyScore = 0;
+const earcopyResults = [];
+
+function loadChord(){
+  if(chordIdx >= chords.length){ showFinalResults(); return; }
+  const c = chords[chordIdx];
+  document.getElementById('quizProgress').textContent = '코드 '+(chordIdx+1)+' / '+chords.length;
+  document.getElementById('chordTime').textContent = c.time;
+  document.getElementById('chordSectionDesc').textContent = c.section+' 구간';
+  rootAnswer = null; qualityAnswer = null;
+  document.getElementById('rootStage').style.display='block';
+  document.getElementById('qualityStage').style.display='none';
+  document.getElementById('feedback').classList.remove('show');
+  document.getElementById('nextBtn').classList.remove('show');
+  
+  const noteGrid = document.getElementById('noteGrid'); noteGrid.innerHTML='';
+  NOTES.forEach(n=>{ const b = document.createElement('div'); b.className='note-btn'; b.textContent = n; b.addEventListener('click', ()=>selectRoot(n, b)); noteGrid.appendChild(b); });
+  
+  const qualityGrid = document.getElementById('qualityGrid'); qualityGrid.innerHTML='';
+  QUALITIES.forEach(q=>{ const b = document.createElement('div'); b.className='quality-btn'; b.textContent = q.label; b.dataset.id = q.id; b.addEventListener('click', ()=>selectQuality(q.id, b)); qualityGrid.appendChild(b); });
+}
+
+function selectRoot(note, btnEl){
+  if(rootAnswer !== null) return;
+  rootAnswer = note;
+  const c = chords[chordIdx];
+  const map = {'Db':'C#','Eb':'D#','Gb':'F#','Ab':'G#','Bb':'A#'};
+  const correct = (map[note]||note) === (map[c.root]||c.root);
+  [...document.getElementById('noteGrid').children].forEach(b=>{
+    if((map[b.textContent]||b.textContent) === (map[c.root]||c.root)) b.classList.add('correct');
+    else if(b === btnEl && !correct) b.classList.add('wrong');
+  });
+  if(correct) earcopyScore++;
+  setTimeout(()=>{ document.getElementById('qualityStage').style.display='block'; }, 400);
+}
+
+function selectQuality(qid, btnEl){
+  if(qualityAnswer !== null) return;
+  qualityAnswer = qid;
+  const c = chords[chordIdx];
+  const correct = qid === c.quality;
+  [...document.getElementById('qualityGrid').children].forEach(b=>{
+    if(b.dataset.id === c.quality) b.classList.add('correct');
+    else if(b === btnEl && !correct) b.classList.add('wrong');
+  });
+  if(correct) earcopyScore++;
+  earcopyResults.push({ section: c.section, chordName: c.chordName, rootOk: rootAnswer===c.root, qualOk: correct });
+  const fb = document.getElementById('feedback');
+  fb.innerHTML = '정답은 <b>'+c.chordName+'</b>예요 (근음 '+c.root+' · '+QUALITIES.find(q=>q.id===c.quality).label+')';
+  fb.classList.add('show'); document.getElementById('nextBtn').classList.add('show');
+}
+document.getElementById('nextBtn').addEventListener('click', ()=>{ chordIdx++; loadChord(); });
+
+function showFinalResults(){
+  document.getElementById('quizCard').style.display='none';
+  document.getElementById('resultsCard').classList.add('show');
+  document.getElementById('finalScore').textContent = earcopyScore+'/'+(chords.length*2);
+  const tbody = document.getElementById('answerTableBody'); tbody.innerHTML='';
+  earcopyResults.forEach(r=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>'+r.section+'</td><td>'+r.chordName+'</td>'+
+      '<td class="'+(r.rootOk?'tag-ok':'tag-no')+'">'+(r.rootOk?'맞음':'틀림')+'</td>'+
+      '<td class="'+(r.qualOk?'tag-ok':'tag-no')+'">'+(r.qualOk?'맞음':'틀림')+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// Initial Boot Sequence
+window.addEventListener('DOMContentLoaded', () => {
+  loadCustomSongs(); // Local storage에서 데이터 복원
+});
+
+</script>
+</body>
+</html>
