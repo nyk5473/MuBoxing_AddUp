@@ -1,0 +1,213 @@
+{
+  "main": {
+    "id": "89691142ab3f675a",
+    "type": "split",
+    "children": [
+      {
+        "id": "8f9cfa0bc6f99818",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "95fff942806e2532",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "곡 용어.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "곡 용어"
+            }
+          },
+          {
+            "id": "3c38a24d18b3613f",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "그래프 뷰"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "10fe819ce3f9cce0",
+    "type": "split",
+    "children": [
+      {
+        "id": "59fdea0108c1a01c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "5e86d014b1eda005",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "파일 탐색기"
+            }
+          },
+          {
+            "id": "27019041c4cce39f",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "검색"
+            }
+          },
+          {
+            "id": "cc1c1003374ae00e",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "북마크"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "cfea3eb0c768ca1c",
+    "type": "split",
+    "children": [
+      {
+        "id": "4d08dd03240cbd1c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "61f434bebf5a4b92",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "MuBoxing 관련 서비스 검색 결과.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "MuBoxing 관련 서비스 검색 결과 의 백링크"
+            }
+          },
+          {
+            "id": "35e0660cff60fc1c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "MuBoxing 관련 서비스 검색 결과.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "MuBoxing 관련 서비스 검색 결과 의 나가는 링크"
+            }
+          },
+          {
+            "id": "43201a3ec52fcfa9",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "태그"
+            }
+          },
+          {
+            "id": "9ad1acef6e1ecd9c",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "모든 속성"
+            }
+          },
+          {
+            "id": "a4ef9cfd8e081a3a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "MuBoxing 관련 서비스 검색 결과.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "MuBoxing 관련 서비스 검색 결과 의 개요"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:빠른 전환기 열기": false,
+      "graph:그래프 뷰 열기": false,
+      "canvas:새 캔버스 만들기": false,
+      "daily-notes:오늘의 일일 노트 열기": false,
+      "templates:템플릿 삽입": false,
+      "command-palette:명령어 팔레트 열기": false,
+      "bases:새 베이스 생성하기": false
+    }
+  },
+  "active": "3c38a24d18b3613f",
+  "lastOpenFiles": [
+    "무제.md",
+    "인스타그램 카드뉴스 이미지 레퍼.png",
+    "무제.base",
+    "곡 용어.md",
+    "음악분석 앱, 노래 데이터.md",
+    "무제 1.base",
+    "무제 2.base",
+    "MuBoxing 서비스 기획안.md",
+    "MuBoxing 관련 서비스 검색 결과.md",
+    "MuBoxing 기획안.md",
+    "환영합니다!.md"
+  ]
+}
