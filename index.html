@@ -1174,6 +1174,30 @@ const SNOWMAN_INSTRUMENT_CUES = {
   Guitar: ['기타 계열', '기타 계열', '기타 계열', '기타 계열', '기타 계열', '전반 기타 계열', '후반 기타 계열', '기타 계열'],
   FX: ['', '', '', '', '', '', '', ''],
 };
+// Chroma measured from the separated accompaniment, cross-checked against
+// a published F-major chord chart. Exact inversions and change times vary.
+const SNOWMAN_CHORD_CUES = [
+  'F → Bb → F',
+  'F → C/E → Dm7 → A7 → Bb → F',
+  'Bb → Bbm → F → A7 → Dm7 → C',
+  'F → C/E → Dm7 → A7 → Bb → C → F',
+  'Bb → Bbm → F → A7 → Dm7 → C',
+  'F → C → Dm7 → A7 → Bb → C',
+  'Bbmaj7 → A7 → Bbm7 → G7 → C',
+  'F → C/E → Dm7 → A7 → Bb → C → F',
+];
+const SNOWMAN_CHORD_HARMONY = {
+  top: [
+    {s:30,e:56,label:'Verse: F → C/E → Dm7 → A7 → Bb'},
+    {s:104,e:124,label:'Pre: Bb → Bbm → F → A7 → Dm7 → C'},
+  ],
+  bottom: [
+    {s:72,e:104,label:'Chorus: F → C/E → Dm7 → A7 → Bb → C'},
+    {s:124,e:156,label:'Chorus: F → C → Dm7 → A7 → Bb → C'},
+  ],
+  freq:{},
+  noteText:'반주 음높이 분석과 공개 코드 자료를 대조한 F장조 코드 후보입니다. 전환 시각과 전위 코드는 추정이며, 악보처럼 확정된 채보는 아닙니다.',
+};
 const SNOWMAN_NOTES_KEY = 'muboxing_snowman_instruments_v2';
 
 function getSnowmanNotes(){
@@ -1203,6 +1227,15 @@ function getSnowmanTracks(){
       editable:true, section:section.label, lane:lane.name, index,
     })),
   }));
+}
+
+function getSnowmanChordTrack(){
+  return {
+    name:'Chords', color:'var(--chords)',
+    segs:snowmanAnalysis.data.sections.map((section,index)=>({
+      s:section.start, e:section.end, label:SNOWMAN_CHORD_CUES[index]+' (추정)',
+    })),
+  };
 }
 
 function editSnowmanCell(seg){
@@ -1241,7 +1274,7 @@ function buildRows(elId, list){
 }
 
 function buildHarmonyAndFreq(songId){
-  const data = harmonyData[songId] || { top:[], bottom:[], freq:{}, noteText:'이 곡의 측정 데이터가 없습니다.' };
+  const data = songId === 'snowman' ? SNOWMAN_CHORD_HARMONY : (harmonyData[songId] || { top:[], bottom:[], freq:{}, noteText:'이 곡의 측정 데이터가 없습니다.' });
   const T = SONGS_DB[songId] ? SONGS_DB[songId].TOTAL : TOTAL;
   const secs = SONGS_DB[songId] ? SONGS_DB[songId].sections : sections;
 
@@ -1251,12 +1284,12 @@ function buildHarmonyAndFreq(songId){
     data.top.forEach(seg=>{
       const b=document.createElement('div'); b.className='harm-seg';
       b.style.left=(seg.s/T*100)+'%'; b.style.width=((seg.e-seg.s)/T*100)+'%';
-      b.style.background='var(--chords)'; b.textContent=seg.label; harmonyTrack.appendChild(b);
+      b.style.background='var(--chords)'; b.textContent=seg.label; b.title=seg.label+' (추정)'; harmonyTrack.appendChild(b);
     });
     data.bottom.forEach(seg=>{
       const b=document.createElement('div'); b.className='harm-seg bottom';
       b.style.left=(seg.s/T*100)+'%'; b.style.width=((seg.e-seg.s)/T*100)+'%';
-      b.style.background='#c4b8e0'; b.textContent=seg.label; harmonyTrack.appendChild(b);
+      b.style.background='#c4b8e0'; b.textContent=seg.label; b.title=seg.label+' (추정)'; harmonyTrack.appendChild(b);
     });
   }
 
@@ -1286,17 +1319,17 @@ function setSongData(songId){
   const songData = SONGS_DB[songId];
   TOTAL = songData.TOTAL;
   sections = songData.sections;
-  tracks = songId === 'snowman' ? getSnowmanTracks() : songData.tracks;
-  tracksBasic = songId === 'snowman' ? tracks : tracks.filter(t=>t.name!=='Chords');
+  tracksBasic = songId === 'snowman' ? getSnowmanTracks() : songData.tracks.filter(t=>t.name!=='Chords');
+  tracks = songId === 'snowman' ? [...tracksBasic, getSnowmanChordTrack()] : songData.tracks;
   
   buildRuler('ruler-basic'); buildRows('rows-basic', tracksBasic);
   buildRuler('ruler-inter'); buildRows('rows-inter', tracks);
-  buildRuler('ruler-adv'); buildRows('rows-adv', tracksBasic);
+  buildRuler('ruler-adv'); buildRows('rows-adv', songId === 'snowman' ? tracks : tracksBasic);
   
   buildHarmonyAndFreq(songId);
   buildGrooveAndSpectrum(songId);
   if(songId === 'snowman') document.getElementById('interNoteBox').textContent =
-    '기타·베이스는 오디오 분리와 소리 분류 결과가 일치한 구간에 표시했습니다. 드럼·신스는 추정 표기이며, FX는 독립된 소리를 확인할 근거가 부족해 비워뒀습니다. 칸을 누르면 직접 수정할 수 있고 이 브라우저에 저장됩니다.';
+    'F장조 중심 코드 후보를 반주 음높이와 공개 코드 자료로 대조했습니다. 코드 종류와 전환 시각은 추정입니다. 악기 칸을 누르면 직접 수정할 수 있고 이 브라우저에 저장됩니다.';
 }
 
 let currentSong = null;
@@ -1324,19 +1357,19 @@ function selectSong(songId){
   const legend = document.getElementById('trackLegend');
   if(!legend.dataset.defaultHtml) legend.dataset.defaultHtml = legend.innerHTML;
   legend.innerHTML = songId === 'snowman'
-    ? SNOWMAN_LANES.map(lane=>'<div class="legend-item"><span class="swatch" style="background:'+lane.color+'"></span>'+lane.name+'</div>').join('')
+    ? [...SNOWMAN_LANES,{name:'Chords',color:'var(--chords)'}].map(lane=>'<div class="legend-item"><span class="swatch" style="background:'+lane.color+'"></span>'+lane.name+'</div>').join('')
     : legend.dataset.defaultHtml;
   legend.style.display = measured && songId !== 'snowman' ? 'none' : '';
-  document.getElementById('harmonyTrack').parentElement.style.display = measured ? 'none' : '';
+  document.getElementById('harmonyTrack').parentElement.style.display = measured && songId !== 'snowman' ? 'none' : '';
   document.getElementById('freqBandRow').style.display = songId === 'snowman' ? 'none' : '';
   ['grooveHeading','grooveWrap','mixHeading','mixWrap'].forEach(id=>{
     document.getElementById(id).style.display = songId === 'snowman' ? 'none' : '';
   });
   document.getElementById('interNoteBox').textContent = songId === 'snowman'
-    ? '기타·베이스는 오디오 분리와 소리 분류 결과가 일치한 구간에 표시했습니다. 드럼·신스는 추정 표기이며 FX는 확인할 근거가 부족해 비워뒀습니다. 칸을 눌러 수정하면 이 브라우저에 저장됩니다.'
+    ? 'F장조 중심 코드 후보를 반주 음높이와 공개 코드 자료로 대조했습니다. 코드 종류와 전환 시각은 추정입니다. 악기 칸을 눌러 수정하면 이 브라우저에 저장됩니다.'
     : (harmonyData[songId]?.noteText || '');
   document.getElementById('analysisFooter').textContent = songId === 'snowman'
-    ? '오디오 분리 결과로 악기 후보를 채웠습니다. “추정” 표기는 악기 종류가 확실하지 않은 부분입니다. FX는 독립된 소리를 확인하지 못해 비웠습니다. Intro 00:00~00:29 외 섹션 시작 시각은 추정입니다.'
+    ? '초급에는 악기, 중급·고급에는 코드 후보를 함께 표시합니다. 코드 진행과 전환 시각은 추정입니다. Intro 00:00~00:29 외 섹션 시작 시각도 추정입니다.'
     : measured
       ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
       : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';

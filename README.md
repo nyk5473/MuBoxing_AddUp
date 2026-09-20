@@ -12,6 +12,11 @@
 [Demucs htdemucs_6s](https://github.com/facebookresearch/demucs#available-models)와
 [Audio Spectrogram Transformer](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)입니다.
 
+중급·고급의 코드 진행은 분리한 반주의 [CQT 크로마](https://librosa.org/doc/0.11.0/generated/librosa.feature.chroma_cqt.html)에서
+F·Bb·C 중심음을 확인하고 [공개 코드 자료](https://hopamchuan.com/song/30300/the-snowman/)와
+대조한 후보입니다. 전위 코드와 구간 안의 정확한 전환 시각은 오디오만으로 확정하지 못해
+사이트에서 추정으로 표시합니다.
+
 ## 오디오 분석 서버
 
 GitHub Pages는 정적 파일만 게시합니다. `server/main.py`는 업로드한 오디오를 받아
