@@ -234,6 +234,9 @@
   .row-track{position:relative; height:60px; background: repeating-linear-gradient(90deg, transparent, transparent 9.99%, rgba(255,255,255,0.02) 10%); }
   .seg{ position:absolute; top:10px; bottom:10px; border-radius:6px; display:flex; align-items:center; padding:0 12px; font-size:11.5px; font-weight:600; color:#090710; overflow:hidden; white-space:nowrap; box-shadow:0 2px 10px rgba(0,0,0,0.2); }
   .seg.ghost{ background:transparent !important; border:1px dashed rgba(255,255,255,0.3); color:var(--ink-dim); box-shadow:none; }
+  .seg.instrument-cell{cursor:pointer; border:1px solid rgba(9,7,16,.18);}
+  .seg.instrument-cell:hover,.seg.instrument-cell:focus-visible{filter:brightness(1.15); outline:2px solid var(--ink); outline-offset:1px;}
+  .seg.instrument-cell.unverified{background:rgba(255,255,255,.045) !important; color:var(--ink-dim); border:1px dashed rgba(255,255,255,.2); box-shadow:none; font-weight:400;}
 
   .playhead{ position:absolute; top:0; bottom:0; width:2px; background:var(--chords); box-shadow:0 0 12px var(--chords); z-index:5; pointer-events:none; transition: left 0.1s linear; }
   .playhead::before{ content:''; position:absolute; top:-4px; left:-4px; width:10px; height:10px; border-radius:50%; background:var(--chords); box-shadow:0 0 10px var(--chords); }
@@ -565,7 +568,7 @@
             <div class="ruler"><div class="ruler-label">Section</div><div class="ruler-track" id="ruler-inter"></div></div>
             <div id="rows-inter"></div>
             <div class="row"><div class="row-label">Chords<br>(Verse vs Chorus)</div><div class="row-track harmony" id="harmonyTrack"></div></div>
-            <div class="row"><div class="row-label">Freq. Band<br>(Low/Mid/High)</div><div class="row-track" id="freqTrack" style="position:relative;"></div></div>
+            <div class="row" id="freqBandRow"><div class="row-label">Freq. Band<br>(Low/Mid/High)</div><div class="row-track" id="freqTrack" style="position:relative;"></div></div>
             <div class="playhead-track"><div class="playhead" id="playhead-inter" style="left:0%"></div></div>
           </div>
         </div>
@@ -581,8 +584,8 @@
           </div>
         </div>
 
-        <h2>그루브 디테일 — Verse vs Chorus (1 bar)</h2>
-        <div class="groove-wrap">
+        <h2 id="grooveHeading">그루브 디테일 — Verse vs Chorus (1 bar)</h2>
+        <div class="groove-wrap" id="grooveWrap">
           <div class="groove-card">
             <div class="groove-title" id="grooveVerseTitle">Verse 1 — 킥/스네어 패턴</div>
             <div class="groove-sub" id="grooveVerseSub">16th grid · swing ~58%</div>
@@ -597,8 +600,8 @@
           </div>
         </div>
 
-        <h2>믹스 레퍼런스 — 대역별 밸런스</h2>
-        <div class="mix-wrap">
+        <h2 id="mixHeading">믹스 레퍼런스 — 대역별 밸런스</h2>
+        <div class="mix-wrap" id="mixWrap">
           <div class="mix-card">
             <div class="mix-title">Verse — 스펙트럼 스냅샷</div>
             <svg class="spectrum" viewBox="0 0 300 110" id="specVerse"></svg>
@@ -1150,6 +1153,44 @@ function buildRuler(elId){
   });
 }
 
+const SNOWMAN_LANES = [
+  {name:'Drums', color:'var(--drums)'},
+  {name:'Bass', color:'var(--bass)'},
+  {name:'Synth', color:'var(--chords)'},
+  {name:'Guitar', color:'var(--fx)'},
+  {name:'Vocal', color:'var(--vocal)'},
+  {name:'FX', color:'var(--fx)'},
+];
+const SNOWMAN_NOTES_KEY = 'muboxing_snowman_instruments_v1';
+
+function getSnowmanNotes(){
+  try { return JSON.parse(localStorage.getItem(SNOWMAN_NOTES_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function getSnowmanTracks(){
+  const notes = getSnowmanNotes();
+  return SNOWMAN_LANES.map(lane => ({
+    ...lane,
+    segs: snowmanAnalysis.data.sections.map((section, index) => ({
+      s:section.start, e:section.end,
+      label:notes[lane.name + ':' + index] || '',
+      editable:true, section:section.label, lane:lane.name, index,
+    })),
+  }));
+}
+
+function editSnowmanCell(seg){
+  const notes = getSnowmanNotes();
+  const key = seg.lane + ':' + seg.index;
+  const answer = prompt(seg.section + ' · ' + seg.lane + '\n들리는 악기나 소리를 적어주세요. 빈칸으로 저장하면 지워집니다.', notes[key] || '');
+  if(answer === null) return;
+  if(answer.trim()) notes[key] = answer.trim().slice(0, 120);
+  else delete notes[key];
+  localStorage.setItem(SNOWMAN_NOTES_KEY, JSON.stringify(notes));
+  setSongData('snowman');
+}
+
 function buildRows(elId, list){
   const rowsEl = document.getElementById(elId); if(!rowsEl) return; rowsEl.innerHTML = '';
   list.forEach(t=>{
@@ -1157,10 +1198,17 @@ function buildRows(elId, list){
     const label=document.createElement('div'); label.className='row-label'; label.textContent=t.name; row.appendChild(label);
     const trackEl=document.createElement('div'); trackEl.className='row-track';
     t.segs.forEach(seg=>{
-      const b=document.createElement('div'); b.className='seg'+(seg.ghost?' ghost':'');
+      const b=document.createElement('div'); b.className='seg'+(seg.ghost?' ghost':'')+(seg.editable?' instrument-cell'+(seg.label?'':' unverified'):'');
       b.style.left=(seg.s/TOTAL*100)+'%'; b.style.width=((seg.e-seg.s)/TOTAL*100)+'%';
       if(!seg.ghost) b.style.background=t.color;
-      b.textContent=seg.label||''; b.title=(seg.label||'브레이크')+' · '+fmt(seg.s)+'–'+fmt(seg.e);
+      b.textContent=seg.label||'';
+      b.title=seg.editable ? seg.section+' · '+seg.lane+' · '+(seg.label||'악기 미입력')+' (클릭해 수정)' : (seg.label||'브레이크')+' · '+fmt(seg.s)+'–'+fmt(seg.e);
+      if(seg.editable){
+        b.tabIndex=0; b.setAttribute('role','button');
+        b.setAttribute('aria-label',b.title);
+        b.onclick=()=>editSnowmanCell(seg);
+        b.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); editSnowmanCell(seg); } };
+      }
       trackEl.appendChild(b);
     });
     row.appendChild(trackEl); rowsEl.appendChild(row);
@@ -1213,8 +1261,8 @@ function setSongData(songId){
   const songData = SONGS_DB[songId];
   TOTAL = songData.TOTAL;
   sections = songData.sections;
-  tracks = songData.tracks;
-  tracksBasic = tracks.filter(t=>t.name!=='Chords');
+  tracks = songId === 'snowman' ? getSnowmanTracks() : songData.tracks;
+  tracksBasic = songId === 'snowman' ? tracks : tracks.filter(t=>t.name!=='Chords');
   
   buildRuler('ruler-basic'); buildRows('rows-basic', tracksBasic);
   buildRuler('ruler-inter'); buildRows('rows-inter', tracks);
@@ -1222,6 +1270,8 @@ function setSongData(songId){
   
   buildHarmonyAndFreq(songId);
   buildGrooveAndSpectrum(songId);
+  if(songId === 'snowman') document.getElementById('interNoteBox').textContent =
+    '칸을 눌러 구간별로 확인한 소리를 기록할 수 있어요. 입력 내용은 이 브라우저에 저장됩니다. 빈칸은 아직 기록된 악기가 없다는 뜻입니다.';
 }
 
 let currentSong = null;
@@ -1246,11 +1296,25 @@ function selectSong(songId){
   if(currentSong && currentSong.id) setSongData(currentSong.id);
   const measured = songId === 'snowman' || songId.startsWith('file_') || songId.startsWith('url_');
   document.getElementById('btnEarcopy').style.display = measured ? 'none' : '';
-  document.getElementById('trackLegend').style.display = measured ? 'none' : '';
+  const legend = document.getElementById('trackLegend');
+  if(!legend.dataset.defaultHtml) legend.dataset.defaultHtml = legend.innerHTML;
+  legend.innerHTML = songId === 'snowman'
+    ? SNOWMAN_LANES.map(lane=>'<div class="legend-item"><span class="swatch" style="background:'+lane.color+'"></span>'+lane.name+'</div>').join('')
+    : legend.dataset.defaultHtml;
+  legend.style.display = measured && songId !== 'snowman' ? 'none' : '';
   document.getElementById('harmonyTrack').parentElement.style.display = measured ? 'none' : '';
-  document.getElementById('analysisFooter').textContent = measured
-    ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
-    : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';
+  document.getElementById('freqBandRow').style.display = songId === 'snowman' ? 'none' : '';
+  ['grooveHeading','grooveWrap','mixHeading','mixWrap'].forEach(id=>{
+    document.getElementById(id).style.display = songId === 'snowman' ? 'none' : '';
+  });
+  document.getElementById('interNoteBox').textContent = songId === 'snowman'
+    ? '구간별 악기 칸을 눌러 들리는 소리를 기록할 수 있어요. 입력 내용은 이 브라우저에 저장됩니다. 빈칸은 해당 구간의 소리를 확인하지 않았거나 기록할 악기가 없다는 뜻입니다.'
+    : (harmonyData[songId]?.noteText || '');
+  document.getElementById('analysisFooter').textContent = songId === 'snowman'
+    ? '구간별 악기 지도입니다. 행 이름은 기록용 분류이며 실제 악기 출현을 뜻하지 않습니다. 확인한 칸만 눌러 입력하세요. Intro 00:00~00:29 외 곡 구조 경계는 추정입니다.'
+    : measured
+      ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
+      : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';
   loadPlayerUI();
   showStage('stagePlayer');
   // 풀스코어 기본 활성화
