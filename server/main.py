@@ -3,19 +3,29 @@
 from __future__ import annotations
 
 import subprocess
+import re
+import tempfile
 from pathlib import Path
 
 import imageio_ffmpeg
 import numpy as np
+import yt_dlp
+import deno
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
 MAX_BYTES = 50 * 1024 * 1024
 SAMPLE_RATE = 11025
 HOP = 4096
 ALLOWED = {".mp3", ".wav", ".m4a", ".ogg", ".webm", ".flac"}
+VIDEO_ID = re.compile(r"^[A-Za-z0-9_-]{11}$")
+
+
+class VideoRequest(BaseModel):
+    video_id: str
 
 app = FastAPI(title="MuBoxing audio analysis")
 app.add_middleware(
@@ -109,6 +119,26 @@ def analyze_pcm(samples: np.ndarray, sample_rate: int = SAMPLE_RATE) -> dict:
     }
 
 
+def decode_and_analyze(source: str, input_bytes: bytes | None = None) -> dict:
+    try:
+        decoded = subprocess.run(
+            [imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-i", source,
+             "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE),
+             "-t", "600", "pipe:1"],
+            input=input_bytes, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            timeout=90, check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(422, "오디오 변환 시간이 초과되었습니다.")
+    if decoded.returncode or not decoded.stdout:
+        raise HTTPException(422, "오디오를 읽을 수 없습니다.")
+    samples = np.frombuffer(decoded.stdout, dtype="<i2").astype(np.float32) / 32768
+    try:
+        return analyze_pcm(samples)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+
+
 @app.post("/api/analyze")
 async def analyze(file: UploadFile = File(...)):
     if Path(file.filename or "").suffix.lower() not in ALLOWED:
@@ -122,20 +152,58 @@ async def analyze(file: UploadFile = File(...)):
         chunks.append(chunk)
     if not size:
         raise HTTPException(400, "빈 파일입니다.")
-    try:
-        decoded = subprocess.run(
-            [imageio_ffmpeg.get_ffmpeg_exe(), "-v", "error", "-i", "pipe:0",
-             "-f", "s16le", "-ac", "1", "-ar", str(SAMPLE_RATE),
-             "-t", "600", "pipe:1"],
-            input=b"".join(chunks), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            timeout=90, check=False,
-        )
-    except subprocess.TimeoutExpired:
-        raise HTTPException(422, "오디오 변환 시간이 초과되었습니다.")
-    if decoded.returncode or not decoded.stdout:
-        raise HTTPException(422, "오디오를 읽을 수 없습니다.")
-    samples = np.frombuffer(decoded.stdout, dtype="<i2").astype(np.float32) / 32768
-    try:
-        return analyze_pcm(samples)
-    except ValueError as exc:
-        raise HTTPException(422, str(exc))
+    return decode_and_analyze("pipe:0", b"".join(chunks))
+
+
+def analyze_video(video_id: str) -> dict:
+    if not VIDEO_ID.fullmatch(video_id):
+        raise HTTPException(400, "올바른 유튜브 영상 ID가 아닙니다.")
+    url = f"https://www.youtube.com/watch?v={video_id}"
+
+    def limit_duration(info, *, incomplete):
+        duration = info.get("duration")
+        if duration and duration > 600:
+            return "10분 이하 영상만 분석할 수 있습니다."
+
+    def limit_download(progress):
+        if progress.get("downloaded_bytes", 0) > MAX_BYTES:
+            raise yt_dlp.utils.DownloadError("오디오가 50MB를 초과했습니다.")
+
+    with tempfile.TemporaryDirectory(prefix="muboxing-") as temp_dir:
+        options = {
+            "format": "bestaudio/best",
+            "outtmpl": str(Path(temp_dir) / "audio.%(ext)s"),
+            "noplaylist": True,
+            "max_filesize": MAX_BYTES,
+            "match_filter": limit_duration,
+            "progress_hooks": [limit_download],
+            "socket_timeout": 15,
+            "retries": 1,
+            "fragment_retries": 1,
+            "quiet": True,
+            "no_warnings": True,
+            "js_runtimes": {"deno": {"path": deno.find_deno_bin()}},
+        }
+        try:
+            with yt_dlp.YoutubeDL(options) as downloader:
+                info = downloader.extract_info(url, download=True)
+                if not info:
+                    raise HTTPException(422, "이 영상의 오디오를 가져올 수 없습니다.")
+                path = Path(downloader.prepare_filename(info))
+        except yt_dlp.utils.DownloadError:
+            raise HTTPException(422, "영상을 가져오지 못했습니다. 비공개·연령 제한·지역 제한 영상이거나 유튜브에서 요청을 차단했을 수 있습니다.")
+        if not path.is_file() or path.stat().st_size > MAX_BYTES:
+            raise HTTPException(422, "영상 오디오가 없거나 50MB 제한을 초과했습니다.")
+        result = decode_and_analyze(str(path))
+        result["video"] = {
+            "id": video_id,
+            "title": info.get("title") or "유튜브 영상",
+            "artist": info.get("uploader") or "유튜브",
+            "duration": info.get("duration"),
+        }
+        return result
+
+
+@app.post("/api/analyze-youtube")
+def analyze_youtube(request: VideoRequest):
+    return analyze_video(request.video_id)

@@ -3,3 +3,5 @@ uvicorn==0.34.2
 python-multipart==0.0.20
 numpy==2.2.5
 imageio-ffmpeg==0.6.0
+yt-dlp[default]
+deno==2.9.0

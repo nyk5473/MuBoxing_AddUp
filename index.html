@@ -343,7 +343,7 @@
     <div class="hero">
       <div class="eyebrow">뮤박싱</div>
       <h1>곡을 선택하세요</h1>
-      <p class="sub">예시 곡을 고르거나 음악 파일을 업로드해 음향을 측정해요. 유튜브 링크는 영상 열기에 사용합니다.</p>
+      <p class="sub">예시 곡을 고르거나 음악 파일·유튜브 링크를 분석해 음향 변화를 살펴보세요.</p>
     </div>
 
     <div class="wrap-narrow">
@@ -431,11 +431,11 @@
         <div class="yt-search-tip">💡 버튼을 누르면 유튜브 검색이 새 탭에서 열립니다. 마음에 드는 영상의 URL을 복사하여 아래에 붙여넣으세요.</div>
 
         <!-- Step 2: URL 붙여넣기 -->
-        <div class="yt-step2" id="ytStep2">
-          <div class="yt-step2-label">▼ STEP 2 — 영상 URL을 붙여넣고 유튜브에서 열기</div>
+        <div class="yt-step2 visible" id="ytStep2">
+          <div class="yt-step2-label">▼ STEP 2 — 공개 영상 URL을 붙여넣고 분석하기</div>
           <div class="url-input-group">
             <input id="urlInput" type="text" placeholder="https://youtube.com/watch?v=... 또는 videoId"/>
-            <button class="btn-load" onclick="loadFromUrl()">영상 열기</button>
+            <button class="btn-load" onclick="loadFromUrl()">분석하기</button>
           </div>
         </div>
       </div>
@@ -444,7 +444,7 @@
       <div class="divider"><span class="divider-text">또는</span></div>
 
       <div class="section-label">음악 파일 분석 (실제 음향 측정)</div>
-      <p style="color:var(--ink-dim);font-size:12px;margin:8px 0;">파일의 에너지와 저·중·고역 변화를 측정합니다. 악기·보컬·코드는 구분하지 않습니다. 유튜브 링크만으로는 음원을 분석할 수 없습니다.</p>
+      <p style="color:var(--ink-dim);font-size:12px;margin:8px 0;">파일과 접근 가능한 공개 영상의 에너지·저·중·고역 변화를 측정합니다. 악기·보컬·코드는 구분하지 않습니다. 권한이 있는 영상만 분석해 주세요.</p>
       <label for="apiUrl" style="display:block;color:var(--ink-dim);font-size:12px;margin:12px 0 5px;">분석 서버 주소</label>
       <input id="apiUrl" type="url" placeholder="https://muboxing-addup-api.onrender.com" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-raised);color:var(--ink);border:1px solid var(--line);" />
       <div class="upload-zone" id="uploadZone">
@@ -1231,7 +1231,7 @@ function selectSong(songId){
   // 버전선택 단계 스킵 → 즉시 플레이어로
   selectedVersion = 'fullscore';
   if(currentSong && currentSong.id) setSongData(currentSong.id);
-  const measured = songId.startsWith('file_');
+  const measured = songId.startsWith('file_') || songId.startsWith('url_');
   document.getElementById('btnEarcopy').style.display = measured ? 'none' : '';
   document.getElementById('trackLegend').style.display = measured ? 'none' : '';
   document.getElementById('harmonyTrack').parentElement.style.display = measured ? 'none' : '';
@@ -1523,9 +1523,18 @@ document.getElementById('gpProgressOuter').addEventListener('click', (e) => {
 
 function extractVideoId(input){
   if(!input) return null;
-  const patterns = [ /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/, /^([a-zA-Z0-9_-]{11})$/ ];
-  for(const p of patterns){ const m = input.match(p); if(m) return m[1]; }
-  return null;
+  if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+  try {
+    const url = new URL(input);
+    const host = url.hostname.toLowerCase();
+    let id = null;
+    if(host === 'youtu.be') id = url.pathname.split('/')[1];
+    else if(['youtube.com','www.youtube.com','m.youtube.com','music.youtube.com'].includes(host)) {
+      id = url.pathname === '/watch' ? url.searchParams.get('v') :
+        url.pathname.match(/^\/(?:shorts|embed|live)\/([a-zA-Z0-9_-]{11})/)?.[1];
+    }
+    return /^[a-zA-Z0-9_-]{11}$/.test(id || '') ? id : null;
+  } catch { return null; }
 }
 
 function ytSearch(mode) {
@@ -1569,13 +1578,38 @@ function ytSearch(mode) {
     '<div class="msg-ok" style="margin-top:10px;">✓ 새 탭에서 유튜브 검색이 열렸어요. 마음에 드는 영상 URL을 복사해 아래에 붙여넣으세요.</div>';
 }
 
-function loadFromUrl(){
+async function loadFromUrl(){
   const input = document.getElementById('urlInput').value.trim();
   const videoId = extractVideoId(input);
   const msg = document.getElementById('urlMsg');
-  if(!videoId){ msg.innerHTML = '<div class="msg-error">유튜브 링크나 videoId가 올바르지 않아요.</div>'; return; }
-  window.open('https://www.youtube.com/watch?v=' + videoId, '_blank', 'noopener');
-  msg.innerHTML = '<div class="msg-ok">영상을 열었습니다. 실제 음향 분석은 보유한 오디오 파일을 아래에서 업로드해주세요.</div>';
+  if(!videoId){ msg.textContent = '유튜브 영상 링크나 영상 ID가 올바르지 않습니다.'; return; }
+  const apiBase = document.getElementById('apiUrl').value.trim().replace(/\/$/, '');
+  if(!/^https:\/\/[^/]+$/.test(apiBase) && !/^http:\/\/localhost:\d+$/.test(apiBase) && !/^http:\/\/127\.0\.0\.1:\d+$/.test(apiBase)){
+    msg.textContent = '분석 서버의 HTTPS 주소를 입력해주세요.';
+    return;
+  }
+  localStorage.setItem('muboxing_api_url', apiBase);
+  const button = document.querySelector('#ytStep2 .btn-load');
+  button.disabled = true;
+  msg.textContent = '서버에서 영상 오디오를 가져와 측정 중입니다. 잠시 기다려주세요…';
+  try {
+    const response = await fetch(apiBase + '/api/analyze-youtube', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({video_id:videoId})
+    });
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.detail || '영상 분석 서버 오류');
+    const N = result.data.TOTAL;
+    const tempId = 'url_' + Date.now();
+    const meta = {id:tempId, title:result.video.title, artist:result.video.artist,
+      youtubeId:videoId, fileUrl:null, duration:fmt(N), TOTAL:N};
+    saveToLocalStorage(tempId, result, meta);
+    msg.textContent = '영상 음향 측정이 완료되었습니다.';
+    setTimeout(()=>selectSong(tempId), 500);
+  } catch(error){
+    msg.textContent = '분석 실패: ' + error.message;
+  } finally {
+    button.disabled = false;
+  }
 }
 
 const uploadZone = document.getElementById('uploadZone');
@@ -1766,7 +1800,7 @@ function buildSpectrum(svgId, lowCurve, midCurve, highCurve){
 }
 
 function buildGrooveAndSpectrum(songId){
-  if(songId.startsWith('file_')){
+  if(songId.startsWith('file_') || songId.startsWith('url_')){
     ['grooveVerseTitle','grooveChorusTitle'].forEach(id=>document.getElementById(id).textContent='이 곡의 그루브 패턴은 제공하지 않습니다');
     ['grooveVerseSub','grooveChorusSub','grooveVerseNote','grooveChorusNote','grooveVerse','grooveChorus','specVerse','specChorus'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.textContent='';
