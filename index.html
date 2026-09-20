@@ -388,7 +388,7 @@
 
       <!-- 동적으로 추가되는 내 분석 곡들 (localStorage) -->
       <div class="section-label" id="customLabel" style="display:none;">
-        내 자동 분석 곡 <button class="clear-btn" style="margin-left:8px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); border-radius:6px; padding:2px 8px; font-size:10px; cursor:pointer;" onclick="clearCustomData()">초기화</button>
+        내 음향 측정 결과 <button class="clear-btn" style="margin-left:8px; background:transparent; border:1px solid var(--line); color:var(--ink-dim); border-radius:6px; padding:2px 8px; font-size:10px; cursor:pointer;" onclick="clearCustomData()">초기화</button>
       </div>
       <div class="preset-songs" id="dynamicPresets" style="margin-bottom:32px; display:none;"></div>
 
@@ -432,10 +432,10 @@
 
         <!-- Step 2: URL 붙여넣기 -->
         <div class="yt-step2" id="ytStep2">
-          <div class="yt-step2-label">▼ STEP 2 — 영상 URL 또는 ID를 붙여넣고 로드</div>
+          <div class="yt-step2-label">▼ STEP 2 — 영상 URL을 붙여넣고 유튜브에서 열기</div>
           <div class="url-input-group">
             <input id="urlInput" type="text" placeholder="https://youtube.com/watch?v=... 또는 videoId"/>
-            <button class="btn-load" onclick="loadFromUrl()">로드</button>
+            <button class="btn-load" onclick="loadFromUrl()">영상 열기</button>
           </div>
         </div>
       </div>
@@ -443,12 +443,15 @@
 
       <div class="divider"><span class="divider-text">또는</span></div>
 
-      <div class="section-label">음악 파일 (AI 자동 분석)</div>
+      <div class="section-label">음악 파일 분석 (실제 음향 측정)</div>
+      <p style="color:var(--ink-dim);font-size:12px;margin:8px 0;">파일의 에너지와 저·중·고역 변화를 측정합니다. 악기·보컬·코드는 구분하지 않습니다. 유튜브 링크만으로는 음원을 분석할 수 없습니다.</p>
+      <label for="apiUrl" style="display:block;color:var(--ink-dim);font-size:12px;margin:12px 0 5px;">분석 서버 주소</label>
+      <input id="apiUrl" type="url" placeholder="https://muboxing-addup-api.onrender.com" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-raised);color:var(--ink);border:1px solid var(--line);" />
       <div class="upload-zone" id="uploadZone">
         <div class="upload-icon">📁</div>
         <p class="upload-text"><strong>클릭 또는 파일을 드래그</strong></p>
-        <p class="upload-sub">지원: MP3, WAV, M4A (최대 50MB)</p>
-        <input id="fileInput" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm" />
+        <p class="upload-sub">지원: MP3, WAV, M4A, OGG, WEBM, FLAC (최대 50MB·10분)</p>
+        <input id="fileInput" type="file" accept=".mp3,.wav,.m4a,.ogg,.webm,.flac" />
       </div>
       <div id="fileMsg"></div>
     </div>
@@ -530,7 +533,7 @@
         <button class="tab" data-mode="adv">고급</button>
       </div>
 
-      <div class="legend">
+      <div class="legend" id="trackLegend">
         <div class="legend-item"><span class="swatch" style="background:var(--drums)"></span>Drums</div>
         <div class="legend-item"><span class="swatch" style="background:var(--bass)"></span>Bass</div>
         <div class="legend-item"><span class="swatch" style="background:var(--chords)"></span>Chords</div>
@@ -546,7 +549,7 @@
             <div class="playhead-track"><div class="playhead" id="playhead-basic" style="left:0%"></div></div>
           </div>
         </div>
-        <footer>구간 길이는 BPM 기준으로 보정한 값이에요. <b>상단의 섹션(Intro, Verse 등)을 클릭하면 해당 구간으로 바로 이동해요.</b></footer>
+        <footer id="analysisFooter">구간 길이는 BPM 기준으로 보정한 값이에요. <b>상단의 섹션(Intro, Verse 등)을 클릭하면 해당 구간으로 바로 이동해요.</b></footer>
       </div>
 
       <div class="mode-panel" id="panel-inter">
@@ -1064,7 +1067,7 @@ const harmonyData = {
 };
 
 function loadCustomSongs() {
-  const saved = localStorage.getItem('mubaksing_custom');
+  const saved = localStorage.getItem('mubaksing_measured_v2');
   const container = document.getElementById('dynamicPresets');
   if (saved) {
     try {
@@ -1081,7 +1084,11 @@ function loadCustomSongs() {
           currentSong = parsed[key].meta;
           selectSong(key);
         };
-        btn.innerHTML = `<div class="preset-icon" style="color:var(--vocal); font-weight:600;">AI</div><div class="preset-info"><div class="preset-title">${parsed[key].meta.title}</div><div class="preset-artist">${parsed[key].meta.artist}</div></div>`;
+        const icon = document.createElement('div'); icon.className = 'preset-icon'; icon.textContent = '♫';
+        const info = document.createElement('div'); info.className = 'preset-info';
+        const title = document.createElement('div'); title.className = 'preset-title'; title.textContent = parsed[key].meta.title;
+        const artist = document.createElement('div'); artist.className = 'preset-artist'; artist.textContent = parsed[key].meta.artist;
+        info.append(title, artist); btn.append(icon, info);
         container.appendChild(btn);
         count++;
       }
@@ -1098,7 +1105,7 @@ function loadCustomSongs() {
 }
 
 function clearCustomData() {
-  localStorage.removeItem('mubaksing_custom');
+  localStorage.removeItem('mubaksing_measured_v2');
   document.getElementById('dynamicPresets').innerHTML = '';
   document.getElementById('dynamicPresets').style.display = 'none';
   document.getElementById('customLabel').style.display = 'none';
@@ -1149,7 +1156,7 @@ function buildRows(elId, list){
 }
 
 function buildHarmonyAndFreq(songId){
-  const data = harmonyData[songId] || { top:[], bottom:[], freq:{}, noteText:'AI 자동 분석 모드입니다.' };
+  const data = harmonyData[songId] || { top:[], bottom:[], freq:{}, noteText:'이 곡의 측정 데이터가 없습니다.' };
   const T = SONGS_DB[songId] ? SONGS_DB[songId].TOTAL : TOTAL;
   const secs = SONGS_DB[songId] ? SONGS_DB[songId].sections : sections;
 
@@ -1224,6 +1231,13 @@ function selectSong(songId){
   // 버전선택 단계 스킵 → 즉시 플레이어로
   selectedVersion = 'fullscore';
   if(currentSong && currentSong.id) setSongData(currentSong.id);
+  const measured = songId.startsWith('file_');
+  document.getElementById('btnEarcopy').style.display = measured ? 'none' : '';
+  document.getElementById('trackLegend').style.display = measured ? 'none' : '';
+  document.getElementById('harmonyTrack').parentElement.style.display = measured ? 'none' : '';
+  document.getElementById('analysisFooter').textContent = measured
+    ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
+    : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';
   loadPlayerUI();
   showStage('stagePlayer');
   // 풀스코어 기본 활성화
@@ -1514,68 +1528,6 @@ function extractVideoId(input){
   return null;
 }
 
-// Improved Heuristic based on 4-bar / 8-bar snapping (approx 120BPM)
-function generateAutoAnalysis(N) {
-  let current = 0;
-  const secs = [];
-  // Typical structure chunk sizes (in seconds)
-  const blocks = [
-    { label:'Intro', d: 16 }, { label:'Verse 1', d: 32 }, { label:'Pre-chorus', d: 16 },
-    { label:'Chorus 1', d: 32 }, { label:'Verse 2', d: 32 }, { label:'Chorus 2', d: 32 },
-    { label:'Bridge', d: 16 }, { label:'Outro', d: 32 }
-  ];
-  
-  for(let b of blocks) {
-    if(current >= N - 5) break;
-    let end = current + b.d;
-    if (end > N - 10) end = N; // snap to end if close
-    secs.push({ label: b.label, start: current, end: end });
-    current = end;
-  }
-  if(current < N && secs.length > 0) secs[secs.length-1].end = N;
-
-  const tracks = [
-    {name:'Drums', color:'var(--drums)', segs:[]}, {name:'Bass', color:'var(--bass)', segs:[]},
-    {name:'Chords', color:'var(--chords)', segs:[]}, {name:'Vocal', color:'var(--vocal)', segs:[]},
-    {name:'FX', color:'var(--fx)', segs:[]}
-  ];
-  
-  const freqMap = {};
-  const topHarm = [], bottomHarm = [];
-  
-  secs.forEach(s => {
-    // Fill drums (ghost in Bridge)
-    if(s.label === 'Bridge') tracks[0].segs.push({s:s.start, e:s.end, label:'비트 드롭', ghost:true});
-    else tracks[0].segs.push({s:s.start, e:s.end, label:'자동 추출 루프'});
-    
-    // Fill bass (none in Intro)
-    if(s.label !== 'Intro') tracks[1].segs.push({s:s.start, e:s.end, label:'베이스 라인'});
-    
-    // Fill chords
-    tracks[2].segs.push({s:s.start, e:s.end, label:'코드 추론 영역'});
-    
-    // Fill vocal (none in Intro/Outro)
-    if(!['Intro','Outro'].includes(s.label)) tracks[3].segs.push({s:s.start, e:s.end, label:'보컬 구간'});
-    
-    // FX
-    if(['Intro','Bridge','Outro'].includes(s.label)) tracks[4].segs.push({s:s.start, e:s.end, label:'공간감 FX'});
-    
-    // Frequencies
-    if(s.label.includes('Chorus')) freqMap[s.label] = [0.8, 0.8, 0.7];
-    else if(s.label === 'Bridge') freqMap[s.label] = [0.2, 0.6, 0.4];
-    else freqMap[s.label] = [0.5, 0.6, 0.4];
-    
-    // Harmony Top
-    topHarm.push({s:s.start, e:s.end, label:'AI 추정 진행'});
-    if(s.label.includes('Chorus')) bottomHarm.push({s:s.start, e:s.end, label:'코러스 변화 감지'});
-  });
-
-  return {
-    data: { TOTAL: N, sections: secs, tracks: tracks },
-    harmony: { top: topHarm, bottom: bottomHarm, freq: freqMap, noteText: '이 분석은 뮤박싱 AI가 파형과 메타데이터를 기반으로 예측한 자동 추론 결과입니다.' }
-  };
-}
-
 function ytSearch(mode) {
   const title    = document.getElementById('ytSearchTitle').value.trim();
   const artist   = document.getElementById('ytSearchArtist').value.trim();
@@ -1588,8 +1540,8 @@ function ytSearch(mode) {
   }
 
   // 숨겨진 input에도 복사 (loadFromUrl에서 사용)
-  document.getElementById('urlSongTitle').value = title || '유튜브 영상 분석';
-  document.getElementById('urlArtist').value    = artist || 'AI 추출 아티스트';
+  document.getElementById('urlSongTitle').value = title || '유튜브 영상';
+  document.getElementById('urlArtist').value    = artist || '';
 
   // 검색어 조합
   const base = [artist, title, composer].filter(Boolean).join(' ');
@@ -1622,24 +1574,8 @@ function loadFromUrl(){
   const videoId = extractVideoId(input);
   const msg = document.getElementById('urlMsg');
   if(!videoId){ msg.innerHTML = '<div class="msg-error">유튜브 링크나 videoId가 올바르지 않아요.</div>'; return; }
-
-  // ytSearch 입력 우선, 없으면 hidden input, 없으면 기본값
-  const title  = document.getElementById('ytSearchTitle').value.trim()
-              || document.getElementById('urlSongTitle').value.trim()
-              || '유튜브 영상 분석';
-  const artist = document.getElementById('ytSearchArtist').value.trim()
-              || document.getElementById('urlArtist').value.trim()
-              || 'AI 추출 아티스트';
-  const N = 210; // Default estimation for URL without length
-
-  const tempId = 'custom_' + Date.now();
-  const analysis = generateAutoAnalysis(N);
-  const meta = { id: tempId, title, artist, youtubeId: videoId, duration: fmt(N), TOTAL: N };
-
-  saveToLocalStorage(tempId, analysis, meta);
-
-  msg.innerHTML = '<div class="msg-ok">✓ 영상 분석 완료! (브라우저에 데이터가 저장됨)</div>';
-  setTimeout(()=> { selectSong(tempId); }, 1000);
+  window.open('https://www.youtube.com/watch?v=' + videoId, '_blank', 'noopener');
+  msg.innerHTML = '<div class="msg-ok">영상을 열었습니다. 실제 음향 분석은 보유한 오디오 파일을 아래에서 업로드해주세요.</div>';
 }
 
 const uploadZone = document.getElementById('uploadZone');
@@ -1650,29 +1586,34 @@ uploadZone.addEventListener('dragleave', ()=> uploadZone.classList.remove('drag-
 uploadZone.addEventListener('drop', e=>{ e.preventDefault(); uploadZone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
 fileInput.addEventListener('change', e=> handleFile(e.target.files[0]));
 
-function handleFile(file){
+async function handleFile(file){
   const msg = document.getElementById('fileMsg');
   if(!file) return;
   if(file.size > 50*1024*1024){ msg.innerHTML='<div class="msg-error">파일이 50MB를 초과해요.</div>'; return; }
-  
-  msg.innerHTML = '<div style="margin-top:12px; font-size:12px; color:var(--accent);">음원 파일 AI 분석 중... 🎵</div>';
-  const name = file.name.replace(/\.[^.]+$/, '');
-  const url  = URL.createObjectURL(file);
-  
-  const audio = new Audio(url);
-  audio.onloadedmetadata = () => {
-    const N = Math.floor(audio.duration);
+  const input = document.getElementById('apiUrl');
+  const apiBase = input.value.trim().replace(/\/$/, '');
+  if(!/^https:\/\/[^/]+$/.test(apiBase) && !/^http:\/\/localhost:\d+$/.test(apiBase) && !/^http:\/\/127\.0\.0\.1:\d+$/.test(apiBase)){
+    msg.innerHTML = '<div class="msg-error">분석 서버의 HTTPS 주소를 입력해주세요.</div>';
+    return;
+  }
+  localStorage.setItem('muboxing_api_url', apiBase);
+  msg.textContent = '오디오를 서버로 전송하고 음향을 측정하는 중입니다…';
+  const body = new FormData();
+  body.append('file', file);
+  try {
+    const response = await fetch(apiBase + '/api/analyze', {method:'POST', body});
+    const result = await response.json();
+    if(!response.ok) throw new Error(result.detail || '분석 서버 오류');
+    const N = result.data.TOTAL;
     const tempId = 'file_' + Date.now();
-    const analysis = generateAutoAnalysis(N);
-    const meta = { id:tempId, title:name, artist:'로컬 오디오 (AI 분석)', fileUrl:url, youtubeId:null, duration:fmt(N), TOTAL:N };
-    
-    // Save to local storage for persistence
-    saveToLocalStorage(tempId, analysis, meta);
-    
-    msg.innerHTML = '<div class="msg-ok">✓ '+file.name+' 분석 완료 및 데이터 생성됨!</div>';
-    setTimeout(()=> { selectSong(tempId); }, 1000);
-  };
-  audio.onerror = () => { msg.innerHTML='<div class="msg-error">파일을 읽을 수 없습니다.</div>'; };
+    const url = URL.createObjectURL(file);
+    const meta = {id:tempId, title:file.name.replace(/\.[^.]+$/, ''), artist:'업로드 오디오 · 음향 측정', fileUrl:url, youtubeId:null, duration:fmt(N), TOTAL:N};
+    saveToLocalStorage(tempId, result, meta);
+    msg.textContent = '음향 측정이 완료되었습니다. 악기·보컬 분리 결과는 포함되지 않습니다.';
+    setTimeout(()=>selectSong(tempId), 500);
+  } catch(error){
+    msg.textContent = '분석 실패: ' + error.message + ' 서버 주소와 실행 상태를 확인해주세요.';
+  }
 }
 
 function saveToLocalStorage(id, analysis, meta) {
@@ -1684,10 +1625,10 @@ function saveToLocalStorage(id, analysis, meta) {
   // Exclude fileUrl from local storage since Blob URLs expire
   const storageMeta = { ...meta, fileUrl: null }; 
   
-  let saved = localStorage.getItem('mubaksing_custom');
+  let saved = localStorage.getItem('mubaksing_measured_v2');
   let parsed = saved ? JSON.parse(saved) : {};
   parsed[id] = { data: analysis.data, harmony: analysis.harmony, meta: storageMeta };
-  localStorage.setItem('mubaksing_custom', JSON.stringify(parsed));
+  localStorage.setItem('mubaksing_measured_v2', JSON.stringify(parsed));
   
   loadCustomSongs(); // Refresh UI
 }
@@ -1825,6 +1766,13 @@ function buildSpectrum(svgId, lowCurve, midCurve, highCurve){
 }
 
 function buildGrooveAndSpectrum(songId){
+  if(songId.startsWith('file_')){
+    ['grooveVerseTitle','grooveChorusTitle'].forEach(id=>document.getElementById(id).textContent='이 곡의 그루브 패턴은 제공하지 않습니다');
+    ['grooveVerseSub','grooveChorusSub','grooveVerseNote','grooveChorusNote','grooveVerse','grooveChorus','specVerse','specChorus'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.textContent='';
+    });
+    return;
+  }
   const gData = SONGS_GROOVE_DB[songId] || SONGS_GROOVE_DB['and_july'];
   
   const vTitle = document.getElementById('grooveVerseTitle');
@@ -1987,6 +1935,9 @@ function showFinalResults(){
 // Initial Boot Sequence
 window.addEventListener('DOMContentLoaded', () => {
   loadCustomSongs(); // Local storage에서 데이터 복원
+  document.getElementById('apiUrl').value = localStorage.getItem('muboxing_api_url') ||
+    (location.hostname.endsWith('onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+      ? location.origin : '');
 });
 
 </script>
