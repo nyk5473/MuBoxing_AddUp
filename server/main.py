@@ -194,6 +194,8 @@ def analyze_video(video_id: str) -> dict:
                 raise HTTPException(422, "10분 이하 영상만 분석할 수 있습니다.")
             if "50MB" in str(exc):
                 raise HTTPException(422, "영상 오디오가 50MB 제한을 초과했습니다.")
+            if "Sign in to confirm" in str(exc) or "not a bot" in str(exc):
+                raise HTTPException(422, "유튜브가 서버의 영상 접근을 봇으로 차단했습니다. 음향 분석이 필요하면 보유한 오디오 파일을 업로드해 주세요.")
             raise HTTPException(422, "영상을 가져오지 못했습니다. 비공개·연령 제한·지역 제한 영상이거나 유튜브에서 요청을 차단했을 수 있습니다.")
         if not path.is_file() or path.stat().st_size > MAX_BYTES:
             raise HTTPException(422, "영상 오디오가 없거나 50MB 제한을 초과했습니다.")
