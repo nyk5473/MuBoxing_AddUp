@@ -200,6 +200,9 @@
   .gp-playbtn:disabled{ background:rgba(255,255,255,0.1); color:var(--ink-dim); cursor:wait; box-shadow:none; }
   .gp-time{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-dim); flex-shrink:0; width:40px; }
   .gp-time.end{ text-align:right; }
+  .audio-connect{display:none;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;margin:0 auto 20px;max-width:600px;font-size:12px;color:var(--ink-dim);}
+  .audio-connect button{background:rgba(194,187,255,.12);border:1px solid var(--fx);border-radius:9px;color:var(--ink);padding:9px 14px;cursor:pointer;font:inherit;}
+  .audio-connect button:hover{background:rgba(194,187,255,.24);}
   .gp-progress-outer{ flex:1; height:10px; background:rgba(0,0,0,0.4); border-radius:5px; overflow:hidden; position:relative; cursor:pointer; box-shadow:inset 0 1px 3px rgba(0,0,0,0.5); }
   .gp-progress-track { width:100%; height:100%; position:relative; pointer-events:none; }
   .gp-progress-inner{ position:absolute; top:0; left:0; height:100%; width:0%; background:var(--accent-grad); border-radius:5px; pointer-events:none; box-shadow: 0 0 10px rgba(194,187,255,0.5); }
@@ -529,6 +532,11 @@
         </div>
       </div>
       <div class="gp-time end" id="gpTimeEnd">0:00</div>
+    </div>
+    <div class="audio-connect" id="snowmanAudioPanel">
+      <button type="button" id="snowmanAudioButton">내 오디오 파일 연결</button>
+      <input type="file" id="snowmanAudioInput" accept="audio/*,.m4a,.mp3,.wav" style="display:none">
+      <span id="snowmanAudioStatus">유튜브 재생이 안 되면 보유한 오디오 파일을 연결하세요. 파일은 업로드되지 않습니다.</span>
     </div>
     
     <div class="gp-section-wrap">
@@ -1346,7 +1354,10 @@ function selectSong(songId){
   else if(songId === 'and_july') currentSong = { id:'and_july', title:'And July', artist:'Heize ft. DEAN, DJ Friz', youtubeId:'rCeM57e2BfU', fileUrl:'and_july.mp3', duration:'3:46' };
   else if(songId === 'paradise') currentSong = { id:'paradise', title:'PARADISE', artist:'MILLIC ft. FANXY CHILD', youtubeId:'_fex-Fz3t2g', fileUrl:'PARADISE (FEAT. FANXYCHILD)-mc.mp3', duration:'5:01' };
   else if(songId === 'feel_my_rhythm') currentSong = { id:'feel_my_rhythm', title:'Feel My Rhythm', artist:'Red Velvet (레드벨벳)', youtubeId:'R9At2ICm4LQ', fileUrl:'feel_my_rhythm.mp3', duration:'3:38' };
-  else if(songId === 'snowman') currentSong = { id:'snowman', title:'눈사람 (The Snowman)', artist:'정승환 · 음향 측정', youtubeId:'ruxn3hNS6ig', fileUrl:null, duration:'3:56' };
+  else if(songId === 'snowman') {
+    const localFile = snowmanAudioObjectUrl || (location.protocol === 'file:' ? window.MUBOXING_LOCAL_SNOWMAN_URL : null);
+    currentSong = { id:'snowman', title:'눈사람 (The Snowman)', artist:'정승환 · 음향 측정', youtubeId:localFile ? null : 'ruxn3hNS6ig', fileUrl:localFile || null, duration:'3:56' };
+  }
   // If custom song, it's set by the button click
 
   // 버전선택 단계 스킵 → 즉시 플레이어로
@@ -1354,6 +1365,10 @@ function selectSong(songId){
   if(currentSong && currentSong.id) setSongData(currentSong.id);
   const measured = songId === 'snowman' || songId.startsWith('file_') || songId.startsWith('url_');
   document.getElementById('btnEarcopy').style.display = measured ? 'none' : '';
+  document.getElementById('snowmanAudioPanel').style.display = songId === 'snowman' ? 'flex' : 'none';
+  if(songId === 'snowman') document.getElementById('snowmanAudioStatus').textContent = currentSong.fileUrl
+    ? '오디오 파일이 연결되었습니다. 재생 버튼을 누르세요.'
+    : '유튜브 재생이 안 되면 보유한 오디오 파일을 연결하세요. 파일은 업로드되지 않습니다.';
   const legend = document.getElementById('trackLegend');
   if(!legend.dataset.defaultHtml) legend.dataset.defaultHtml = legend.innerHTML;
   legend.innerHTML = songId === 'snowman'
@@ -1456,6 +1471,26 @@ let ytPlayer = null;
 let ytReady = false;
 let isPlaying = false;
 let animFrameId = null;
+let snowmanAudioObjectUrl = null;
+
+document.getElementById('snowmanAudioButton').addEventListener('click', () => {
+  document.getElementById('snowmanAudioInput').click();
+});
+document.getElementById('snowmanAudioInput').addEventListener('change', event => {
+  const file = event.target.files?.[0];
+  if(!file || !currentSong || currentSong.id !== 'snowman') return;
+  event.target.value = '';
+  if(snowmanAudioObjectUrl) URL.revokeObjectURL(snowmanAudioObjectUrl);
+  snowmanAudioObjectUrl = URL.createObjectURL(file);
+  currentSong.youtubeId = null;
+  currentSong.fileUrl = snowmanAudioObjectUrl;
+  document.getElementById('snowmanAudioStatus').textContent = file.name + ' 연결됨 · 파일은 업로드되지 않습니다.';
+  loadPlayerUI();
+  setupMedia();
+  document.getElementById('localAudio').play().catch(() => {
+    document.getElementById('snowmanAudioStatus').textContent = '파일이 연결되었습니다. 재생 버튼을 누르세요.';
+  });
+});
 
 function loadYouTubeAPI() {
   if (window.YT && window.YT.Player) { ytReady = true; return; }
@@ -1478,7 +1513,9 @@ function setupMedia(){
   const playBtn = document.getElementById('gpPlayBtn');
 
   if(!currentSong || (!currentSong.youtubeId && !currentSong.fileUrl)){
-    container.style.display = 'none'; return;
+    container.style.display = 'none';
+    playBtn.disabled = !(currentSong && currentSong.id === 'snowman');
+    return;
   }
 
   container.style.display = 'block';
@@ -1498,6 +1535,13 @@ function setupMedia(){
     };
     localAudio.onerror = () => {
       console.warn("Local audio failed to load:", currentSong.fileUrl);
+      if(currentSong && currentSong.id === 'snowman'){
+        currentSong.fileUrl = null;
+        localAudio.style.display = 'none';
+        document.getElementById('snowmanAudioStatus').textContent = '오디오를 자동으로 열지 못했습니다. “내 오디오 파일 연결”을 눌러 파일을 선택하세요.';
+        playBtn.disabled = false;
+        return;
+      }
       if (currentSong && currentSong.youtubeId) {
         currentSong.fileUrl = null;
         setupMedia();
@@ -1519,6 +1563,7 @@ function setupMedia(){
   }
 
   function trySetupYT(){
+    if(!currentSong || !currentSong.youtubeId) return;
     if(window.YT && window.YT.Player){
       ytPlayer = new YT.Player('ytIframe', {
         height: '360', width: '100%',
@@ -1555,6 +1600,14 @@ function onPlayerStateChange(event){
 
 function onPlayerError(event){
   console.warn("YouTube Player Error:", event.data);
+  if(currentSong && currentSong.id === 'snowman'){
+    if(ytPlayer && ytPlayer.destroy) ytPlayer.destroy();
+    ytPlayer = null;
+    currentSong.youtubeId = null;
+    document.getElementById('snowmanAudioStatus').textContent = '이 유튜브 영상은 여기서 재생되지 않습니다. “내 오디오 파일 연결”을 눌러 재생하세요.';
+    document.getElementById('gpPlayBtn').disabled = false;
+    return;
+  }
   const oldNotice = document.getElementById('ytErrorNotice');
   if(oldNotice) oldNotice.remove();
   
@@ -1589,12 +1642,18 @@ function onPlayerError(event){
 
 // Transport Controls
 document.getElementById('gpPlayBtn').addEventListener('click', () => {
+  if(currentSong && currentSong.id === 'snowman' && !currentSong.fileUrl && !currentSong.youtubeId){
+    document.getElementById('snowmanAudioInput').click();
+    return;
+  }
   if (isLocalAudioActive()) {
     const audio = document.getElementById('localAudio');
     if(audio.paused) {
       audio.play().catch(e => {
         console.warn("Play error, switching to YouTube:", e);
-        if(currentSong.youtubeId) {
+        if(currentSong.id === 'snowman'){
+          document.getElementById('snowmanAudioStatus').textContent = '재생할 수 없습니다. 다른 오디오 파일을 연결해 주세요.';
+        } else if(currentSong.youtubeId) {
           currentSong.fileUrl = null;
           setupMedia();
         }
@@ -1604,7 +1663,10 @@ document.getElementById('gpPlayBtn').addEventListener('click', () => {
     }
     return;
   }
-  if(!ytPlayer || typeof ytPlayer.getPlayerState !== 'function') return;
+  if(!ytPlayer || typeof ytPlayer.getPlayerState !== 'function'){
+    if(currentSong && currentSong.id === 'snowman') document.getElementById('snowmanAudioInput').click();
+    return;
+  }
   const state = ytPlayer.getPlayerState();
   if(state === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
   else ytPlayer.playVideo();
@@ -2107,6 +2169,19 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('apiUrl').value = localStorage.getItem('muboxing_api_url') ||
     (location.hostname.endsWith('onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       ? location.origin : 'https://muboxing-addup-api.onrender.com');
+  if(location.protocol === 'file:'){
+    const localConfig = document.createElement('script');
+    localConfig.src = './local-audio-config.js';
+    localConfig.onload = () => {
+      if(currentSong?.id === 'snowman' && !snowmanAudioObjectUrl && window.MUBOXING_LOCAL_SNOWMAN_URL){
+        currentSong.youtubeId = null;
+        currentSong.fileUrl = window.MUBOXING_LOCAL_SNOWMAN_URL;
+        loadPlayerUI();
+        setupMedia();
+      }
+    };
+    document.head.appendChild(localConfig);
+  }
 });
 
 </script>

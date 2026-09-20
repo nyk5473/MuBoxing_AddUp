@@ -12,6 +12,11 @@
 [Demucs htdemucs_6s](https://github.com/facebookresearch/demucs#available-models)와
 [Audio Spectrogram Transformer](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)입니다.
 
+‘눈사람’ 재생은 브라우저에서 **내 오디오 파일 연결**로 보유한 파일을 선택할 수 있습니다.
+선택한 파일은 서버에 보내지 않고 브라우저의 임시 URL로 재생합니다. 이 작업 폴더의 로컬
+`file://` 화면에서는 Git에 포함하지 않는 `local-audio-config.js`가 있으면 해당 파일을
+자동으로 연결합니다. 공개 사이트에는 이 로컬 파일 경로가 게시되지 않습니다.
+
 중급·고급의 코드 진행은 분리한 반주의 [CQT 크로마](https://librosa.org/doc/0.11.0/generated/librosa.feature.chroma_cqt.html)에서
 F·Bb·C 중심음을 확인하고 [공개 코드 자료](https://hopamchuan.com/song/30300/the-snowman/)와
 대조한 후보입니다. 전위 코드와 구간 안의 정확한 전환 시각은 오디오만으로 확정하지 못해
