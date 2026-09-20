@@ -1161,6 +1161,10 @@ const SNOWMAN_LANES = [
   {name:'Vocal', color:'var(--vocal)'},
   {name:'FX', color:'var(--fx)'},
 ];
+const SNOWMAN_VOCAL_CUES = [
+  '', '멀리 배웅하던 길', '아무 노력 말아요', '꽃잎이 번지면',
+  '그 다음 말은 이젠', '꽃잎이 번지면', '끝 눈이 와요', '마지막으로 날',
+];
 const SNOWMAN_NOTES_KEY = 'muboxing_snowman_instruments_v2';
 
 function getSnowmanNotes(){
@@ -1186,7 +1190,7 @@ function getSnowmanTracks(){
     ...lane,
     segs: snowmanAnalysis.data.sections.map((section, index) => ({
       s:section.start, e:section.end,
-      label:notes[lane.name + ':' + index] || '',
+      label:notes[lane.name + ':' + index] ?? (lane.name === 'Vocal' ? SNOWMAN_VOCAL_CUES[index] : ''),
       editable:true, section:section.label, lane:lane.name, index,
     })),
   }));
@@ -1195,10 +1199,10 @@ function getSnowmanTracks(){
 function editSnowmanCell(seg){
   const notes = getSnowmanNotes();
   const key = seg.lane + ':' + seg.index;
-  const answer = prompt(seg.section + ' · ' + seg.lane + '\n들리는 악기나 소리를 적어주세요. 빈칸으로 저장하면 지워집니다.', notes[key] || '');
+  const answer = prompt(seg.section + ' · ' + seg.lane + '\n이 구간에서 들리는 내용을 적어주세요. 빈칸으로 저장하면 비워집니다.', seg.label || '');
   if(answer === null) return;
   if(answer.trim()) notes[key] = answer.trim().slice(0, 120);
-  else delete notes[key];
+  else notes[key] = '';
   localStorage.setItem(SNOWMAN_NOTES_KEY, JSON.stringify(notes));
   setSongData('snowman');
 }
@@ -1323,7 +1327,7 @@ function selectSong(songId){
     ? '구간별 악기 칸을 눌러 들리는 소리를 기록할 수 있어요. 입력 내용은 이 브라우저에 저장됩니다. 빈칸은 해당 구간의 소리를 확인하지 않았거나 기록할 악기가 없다는 뜻입니다.'
     : (harmonyData[songId]?.noteText || '');
   document.getElementById('analysisFooter').textContent = songId === 'snowman'
-    ? '제공해 주신 가사 순서대로 Intro → Verse 1 → Pre-chorus → Chorus → Pre-chorus → Chorus → Bridge → Outro를 표시했습니다. Intro 00:00~00:29 외 시작 시각은 추정입니다. 빈 악기 칸은 그대로 두었습니다.'
+    ? '제공해 주신 가사 순서와 각 구간의 첫 구절을 Vocal 행에 표시했습니다. Intro 00:00~00:29 외 시작 시각은 추정입니다. 확인되지 않은 악기 칸은 비워뒀습니다.'
     : measured
       ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
       : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';
