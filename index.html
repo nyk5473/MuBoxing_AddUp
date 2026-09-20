@@ -384,13 +384,13 @@
             <div class="preset-artist">Red Velvet (레드벨벳)</div>
           </div>
         </button>
-        <a class="preset-btn" href="https://youtu.be/ruxn3hNS6ig" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;">
-          <div class="preset-icon">↗</div>
+        <button class="preset-btn" onclick="selectSong('snowman')">
+          <div class="preset-icon">▶</div>
           <div class="preset-info">
             <div class="preset-title">눈사람 (The Snowman)</div>
-            <div class="preset-artist">정승환 · 영상 레퍼런스 (음향 분석 데이터 없음)</div>
+            <div class="preset-artist">정승환 · 실제 음원 음향 측정</div>
           </div>
-        </a>
+        </button>
       </div>
 
       <!-- 동적으로 추가되는 내 분석 곡들 (localStorage) -->
@@ -990,6 +990,9 @@ let sections = sections_new_shoes;
 let tracks = tracks_new_shoes;
 let tracksBasic = tracks.filter(t=>t.name!=='Chords');
 
+// 눈사람: 로컬 오디오에서 측정한 수치 (원본 오디오 미포함)
+const snowmanAnalysis = {"data":{"TOTAL":236.47,"sections":[{"label":"구간 1","start":0.0,"end":8.0},{"label":"구간 2","start":8.0,"end":16.0},{"label":"구간 3","start":16.0,"end":24.0},{"label":"구간 4","start":24.0,"end":32.0},{"label":"구간 5","start":32.0,"end":40.0},{"label":"구간 6","start":40.0,"end":48.0},{"label":"구간 7","start":48.0,"end":56.0},{"label":"구간 8","start":56.0,"end":64.0},{"label":"구간 9","start":64.0,"end":72.0},{"label":"구간 10","start":72.0,"end":80.0},{"label":"구간 11","start":80.0,"end":88.0},{"label":"구간 12","start":88.0,"end":96.0},{"label":"구간 13","start":96.0,"end":104.0},{"label":"구간 14","start":104.0,"end":112.0},{"label":"구간 15","start":112.0,"end":120.0},{"label":"구간 16","start":120.0,"end":128.0},{"label":"구간 17","start":128.0,"end":136.0},{"label":"구간 18","start":136.0,"end":144.0},{"label":"구간 19","start":144.0,"end":152.0},{"label":"구간 20","start":152.0,"end":160.0},{"label":"구간 21","start":160.0,"end":168.0},{"label":"구간 22","start":168.0,"end":176.0},{"label":"구간 23","start":176.0,"end":184.0},{"label":"구간 24","start":184.0,"end":192.0},{"label":"구간 25","start":192.0,"end":200.0},{"label":"구간 26","start":200.0,"end":208.0},{"label":"구간 27","start":208.0,"end":216.0},{"label":"구간 28","start":216.0,"end":224.0},{"label":"구간 29","start":224.0,"end":232.0},{"label":"구간 30","start":232.0,"end":236.47}],"tracks":[{"name":"저역","color":"var(--bass)","segs":[{"s":0.0,"e":8.0,"label":"63%"},{"s":8.0,"e":16.0,"label":"72%"},{"s":16.0,"e":24.0,"label":"68%"},{"s":24.0,"e":32.0,"label":"72%"},{"s":32.0,"e":40.0,"label":"73%"},{"s":40.0,"e":48.0,"label":"62%"},{"s":48.0,"e":56.0,"label":"63%"},{"s":56.0,"e":64.0,"label":"53%"},{"s":64.0,"e":72.0,"label":"48%"},{"s":72.0,"e":80.0,"label":"79%"},{"s":80.0,"e":88.0,"label":"80%"},{"s":88.0,"e":96.0,"label":"75%"},{"s":96.0,"e":104.0,"label":"68%"},{"s":104.0,"e":112.0,"label":"64%"},{"s":112.0,"e":120.0,"label":"60%"},{"s":120.0,"e":128.0,"label":"81%"},{"s":128.0,"e":136.0,"label":"78%"},{"s":136.0,"e":144.0,"label":"78%"},{"s":144.0,"e":152.0,"label":"67%"},{"s":152.0,"e":160.0,"label":"83%"},{"s":160.0,"e":168.0,"label":"94%"},{"s":168.0,"e":176.0,"label":"85%"},{"s":176.0,"e":184.0,"label":"82%"},{"s":184.0,"e":192.0,"label":"93%"},{"s":192.0,"e":200.0,"label":"92%"},{"s":200.0,"e":208.0,"label":"90%"},{"s":208.0,"e":216.0,"label":"36%"},{"s":216.0,"e":224.0,"label":"55%"},{"s":224.0,"e":232.0,"label":"40%"}]},{"name":"중역","color":"var(--chords)","segs":[{"s":0.0,"e":8.0,"label":"20%"},{"s":8.0,"e":16.0,"label":"52%"},{"s":16.0,"e":24.0,"label":"52%"},{"s":24.0,"e":32.0,"label":"49%"},{"s":32.0,"e":40.0,"label":"32%"},{"s":40.0,"e":48.0,"label":"37%"},{"s":48.0,"e":56.0,"label":"24%"},{"s":56.0,"e":64.0,"label":"39%"},{"s":64.0,"e":72.0,"label":"40%"},{"s":72.0,"e":80.0,"label":"51%"},{"s":80.0,"e":88.0,"label":"58%"},{"s":88.0,"e":96.0,"label":"58%"},{"s":96.0,"e":104.0,"label":"50%"},{"s":104.0,"e":112.0,"label":"52%"},{"s":112.0,"e":120.0,"label":"52%"},{"s":120.0,"e":128.0,"label":"69%"},{"s":128.0,"e":136.0,"label":"69%"},{"s":136.0,"e":144.0,"label":"76%"},{"s":144.0,"e":152.0,"label":"77%"},{"s":152.0,"e":160.0,"label":"96%"},{"s":160.0,"e":168.0,"label":"94%"},{"s":168.0,"e":176.0,"label":"93%"},{"s":176.0,"e":184.0,"label":"91%"},{"s":184.0,"e":192.0,"label":"87%"},{"s":192.0,"e":200.0,"label":"94%"},{"s":200.0,"e":208.0,"label":"79%"},{"s":208.0,"e":216.0,"label":"40%"},{"s":216.0,"e":224.0,"label":"25%"}]},{"name":"고역","color":"var(--high)","segs":[{"s":16.0,"e":24.0,"label":"18%"},{"s":24.0,"e":32.0,"label":"24%"},{"s":32.0,"e":40.0,"label":"27%"},{"s":40.0,"e":48.0,"label":"30%"},{"s":56.0,"e":64.0,"label":"20%"},{"s":64.0,"e":72.0,"label":"26%"},{"s":72.0,"e":80.0,"label":"46%"},{"s":80.0,"e":88.0,"label":"41%"},{"s":88.0,"e":96.0,"label":"49%"},{"s":96.0,"e":104.0,"label":"35%"},{"s":104.0,"e":112.0,"label":"40%"},{"s":112.0,"e":120.0,"label":"30%"},{"s":120.0,"e":128.0,"label":"59%"},{"s":128.0,"e":136.0,"label":"42%"},{"s":136.0,"e":144.0,"label":"69%"},{"s":144.0,"e":152.0,"label":"61%"},{"s":152.0,"e":160.0,"label":"85%"},{"s":160.0,"e":168.0,"label":"84%"},{"s":168.0,"e":176.0,"label":"82%"},{"s":176.0,"e":184.0,"label":"83%"},{"s":184.0,"e":192.0,"label":"66%"},{"s":192.0,"e":200.0,"label":"77%"},{"s":200.0,"e":208.0,"label":"65%"},{"s":208.0,"e":216.0,"label":"22%"},{"s":216.0,"e":224.0,"label":"18%"}]},{"name":"에너지","color":"var(--drums)","segs":[{"s":0.0,"e":8.0,"label":"35%"},{"s":8.0,"e":16.0,"label":"44%"},{"s":16.0,"e":24.0,"label":"43%"},{"s":24.0,"e":32.0,"label":"43%"},{"s":32.0,"e":40.0,"label":"33%"},{"s":40.0,"e":48.0,"label":"32%"},{"s":48.0,"e":56.0,"label":"26%"},{"s":56.0,"e":64.0,"label":"37%"},{"s":64.0,"e":72.0,"label":"36%"},{"s":72.0,"e":80.0,"label":"51%"},{"s":80.0,"e":88.0,"label":"55%"},{"s":88.0,"e":96.0,"label":"49%"},{"s":96.0,"e":104.0,"label":"44%"},{"s":104.0,"e":112.0,"label":"45%"},{"s":112.0,"e":120.0,"label":"48%"},{"s":120.0,"e":128.0,"label":"59%"},{"s":128.0,"e":136.0,"label":"60%"},{"s":136.0,"e":144.0,"label":"62%"},{"s":144.0,"e":152.0,"label":"69%"},{"s":152.0,"e":160.0,"label":"89%"},{"s":160.0,"e":168.0,"label":"84%"},{"s":168.0,"e":176.0,"label":"91%"},{"s":176.0,"e":184.0,"label":"81%"},{"s":184.0,"e":192.0,"label":"76%"},{"s":192.0,"e":200.0,"label":"84%"},{"s":200.0,"e":208.0,"label":"71%"},{"s":208.0,"e":216.0,"label":"29%"},{"s":216.0,"e":224.0,"label":"27%"}]},{"name":"변화","color":"var(--fx)","segs":[{"s":0.0,"e":8.0,"label":"28%"},{"s":8.0,"e":16.0,"label":"35%"},{"s":16.0,"e":24.0,"label":"28%"},{"s":24.0,"e":32.0,"label":"35%"},{"s":32.0,"e":40.0,"label":"33%"},{"s":40.0,"e":48.0,"label":"39%"},{"s":48.0,"e":56.0,"label":"29%"},{"s":56.0,"e":64.0,"label":"41%"},{"s":64.0,"e":72.0,"label":"40%"},{"s":72.0,"e":80.0,"label":"47%"},{"s":80.0,"e":88.0,"label":"47%"},{"s":88.0,"e":96.0,"label":"51%"},{"s":96.0,"e":104.0,"label":"52%"},{"s":104.0,"e":112.0,"label":"57%"},{"s":112.0,"e":120.0,"label":"47%"},{"s":120.0,"e":128.0,"label":"51%"},{"s":128.0,"e":136.0,"label":"46%"},{"s":136.0,"e":144.0,"label":"55%"},{"s":144.0,"e":152.0,"label":"47%"},{"s":152.0,"e":160.0,"label":"36%"},{"s":160.0,"e":168.0,"label":"38%"},{"s":168.0,"e":176.0,"label":"28%"},{"s":176.0,"e":184.0,"label":"41%"},{"s":184.0,"e":192.0,"label":"47%"},{"s":192.0,"e":200.0,"label":"45%"},{"s":200.0,"e":208.0,"label":"26%"},{"s":208.0,"e":216.0,"label":"17%"},{"s":216.0,"e":224.0,"label":"44%"},{"s":224.0,"e":232.0,"label":"25%"}]}]},"harmony":{"top":[],"bottom":[],"freq":{"구간 1":[0.636,0.203,0.108],"구간 2":[0.72,0.526,0.169],"구간 3":[0.681,0.522,0.183],"구간 4":[0.729,0.5,0.242],"구간 5":[0.733,0.329,0.279],"구간 6":[0.624,0.375,0.307],"구간 7":[0.634,0.243,0.137],"구간 8":[0.537,0.399,0.208],"구간 9":[0.483,0.407,0.262],"구간 10":[0.798,0.519,0.469],"구간 11":[0.807,0.585,0.419],"구간 12":[0.753,0.589,0.492],"구간 13":[0.683,0.505,0.359],"구간 14":[0.642,0.524,0.405],"구간 15":[0.603,0.528,0.309],"구간 16":[0.813,0.698,0.59],"구간 17":[0.786,0.695,0.429],"구간 18":[0.789,0.763,0.692],"구간 19":[0.675,0.779,0.612],"구간 20":[0.839,0.961,0.853],"구간 21":[0.947,0.943,0.842],"구간 22":[0.858,0.937,0.823],"구간 23":[0.822,0.916,0.832],"구간 24":[0.938,0.877,0.661],"구간 25":[0.924,0.941,0.78],"구간 26":[0.903,0.794,0.655],"구간 27":[0.365,0.404,0.223],"구간 28":[0.554,0.255,0.183],"구간 29":[0.409,0.109,0.112],"구간 30":[0.032,0.008,0.004]},"noteText":"실제 음원의 에너지와 저·중·고역 주파수 분포를 측정했습니다. 악기 분리, 보컬 감지, 코드 추정은 제공하지 않습니다."},"metrics":{"duration":236.47,"peak_energy":1.0}};
+
 // Global DB
 const SONGS_DB = {
   new_shoes: { TOTAL: TOTAL_NEW_SHOES, sections: sections_new_shoes, tracks: tracks_new_shoes },
@@ -997,9 +1000,11 @@ const SONGS_DB = {
   and_july: { TOTAL: TOTAL_AND_JULY, sections: sections_and_july, tracks: tracks_and_july },
   paradise: { TOTAL: TOTAL_PARADISE, sections: sections_paradise, tracks: tracks_paradise },
   feel_my_rhythm: { TOTAL: TOTAL_FMR, sections: sections_fmr, tracks: tracks_fmr },
+  snowman: snowmanAnalysis.data,
 };
 
 const harmonyData = {
+  snowman: snowmanAnalysis.harmony,
   new_shoes: {
     top:    [ {s:0,e:17,label:'Abmaj7 → Gm7'},{s:17,e:43,label:'Ebmaj7 → Gm7 → Fm7 → Bb7'},{s:84,e:109,label:'Ebmaj7 → Gm7 → Fm7 → Bb7'},{s:150,e:176,label:'Abmaj7 → G7 → Cm7'} ],
     bottom: [ {s:59,e:84,label:'Ebmaj7 → G7 → Cm7 → F7'},{s:125,e:150,label:'Ebmaj7 → G7 → Cm7 → F7'},{s:176,e:201,label:'Ebmaj7 → G7 → Cm7 → F7'} ],
@@ -1233,12 +1238,13 @@ function selectSong(songId){
   else if(songId === 'and_july') currentSong = { id:'and_july', title:'And July', artist:'Heize ft. DEAN, DJ Friz', youtubeId:'rCeM57e2BfU', fileUrl:'and_july.mp3', duration:'3:46' };
   else if(songId === 'paradise') currentSong = { id:'paradise', title:'PARADISE', artist:'MILLIC ft. FANXY CHILD', youtubeId:'_fex-Fz3t2g', fileUrl:'PARADISE (FEAT. FANXYCHILD)-mc.mp3', duration:'5:01' };
   else if(songId === 'feel_my_rhythm') currentSong = { id:'feel_my_rhythm', title:'Feel My Rhythm', artist:'Red Velvet (레드벨벳)', youtubeId:'R9At2ICm4LQ', fileUrl:'feel_my_rhythm.mp3', duration:'3:38' };
+  else if(songId === 'snowman') currentSong = { id:'snowman', title:'눈사람 (The Snowman)', artist:'정승환 · 음향 측정', youtubeId:'ruxn3hNS6ig', fileUrl:null, duration:'3:56' };
   // If custom song, it's set by the button click
 
   // 버전선택 단계 스킵 → 즉시 플레이어로
   selectedVersion = 'fullscore';
   if(currentSong && currentSong.id) setSongData(currentSong.id);
-  const measured = songId.startsWith('file_') || songId.startsWith('url_');
+  const measured = songId === 'snowman' || songId.startsWith('file_') || songId.startsWith('url_');
   document.getElementById('btnEarcopy').style.display = measured ? 'none' : '';
   document.getElementById('trackLegend').style.display = measured ? 'none' : '';
   document.getElementById('harmonyTrack').parentElement.style.display = measured ? 'none' : '';
@@ -1807,7 +1813,7 @@ function buildSpectrum(svgId, lowCurve, midCurve, highCurve){
 }
 
 function buildGrooveAndSpectrum(songId){
-  if(songId.startsWith('file_') || songId.startsWith('url_')){
+  if(songId === 'snowman' || songId.startsWith('file_') || songId.startsWith('url_')){
     ['grooveVerseTitle','grooveChorusTitle'].forEach(id=>document.getElementById(id).textContent='이 곡의 그루브 패턴은 제공하지 않습니다');
     ['grooveVerseSub','grooveChorusSub','grooveVerseNote','grooveChorusNote','grooveVerse','grooveChorus','specVerse','specChorus'].forEach(id=>{
       const el=document.getElementById(id); if(el) el.textContent='';
