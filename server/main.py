@@ -190,7 +190,11 @@ def analyze_video(video_id: str) -> dict:
                 if not info:
                     raise HTTPException(422, "이 영상의 오디오를 가져올 수 없습니다.")
                 path = Path(downloader.prepare_filename(info))
-        except yt_dlp.utils.DownloadError:
+        except yt_dlp.utils.DownloadError as exc:
+            if "10분 이하" in str(exc):
+                raise HTTPException(422, "10분 이하 영상만 분석할 수 있습니다.")
+            if "50MB" in str(exc):
+                raise HTTPException(422, "영상 오디오가 50MB 제한을 초과했습니다.")
             raise HTTPException(422, "영상을 가져오지 못했습니다. 비공개·연령 제한·지역 제한 영상이거나 유튜브에서 요청을 차단했을 수 있습니다.")
         if not path.is_file() or path.stat().st_size > MAX_BYTES:
             raise HTTPException(422, "영상 오디오가 없거나 50MB 제한을 초과했습니다.")
