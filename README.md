@@ -24,8 +24,10 @@ python -m uvicorn server.main:app --host 127.0.0.1 --port 8000
 
 저장소의 `render.yaml`을 Render Blueprint로 배포하면 웹 서비스가 생성됩니다.
 Render 계정에서 이 GitHub 저장소에 접근을 허용하고 서비스 생성까지 마쳐야 합니다.
-배포 후 받은 HTTPS 주소를 GitHub Pages 앱의 **분석 서버 주소**에 입력하면
-브라우저에 저장되며 이후 업로드에 사용됩니다. Render에 배포된 앱 주소로
-직접 접속하면 같은 서버를 자동으로 사용합니다.
+현재 배포된 분석 서버는
+[muboxing-addup-api.onrender.com](https://muboxing-addup-api.onrender.com/)입니다.
+GitHub Pages 앱에는 이 주소가 기본값으로 설정됩니다. Render에 배포된 앱 주소로
+직접 접속해도 같은 서버를 자동으로 사용합니다. 다른 주소로 재배포하면
+GitHub Pages 앱의 **분석 서버 주소** 입력란에서 바꿀 수 있습니다.
 
-서버를 GitHub Pages와 별도로 배포하지 않은 상태에서는 업로드 분석을 사용할 수 없습니다.
+무료 Render 인스턴스가 유휴 상태에서 재시작할 때 첫 요청이 지연될 수 있습니다.

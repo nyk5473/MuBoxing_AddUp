@@ -1937,7 +1937,7 @@ window.addEventListener('DOMContentLoaded', () => {
   loadCustomSongs(); // Local storage에서 데이터 복원
   document.getElementById('apiUrl').value = localStorage.getItem('muboxing_api_url') ||
     (location.hostname.endsWith('onrender.com') || location.hostname === 'localhost' || location.hostname === '127.0.0.1'
-      ? location.origin : '');
+      ? location.origin : 'https://muboxing-addup-api.onrender.com');
 });
 
 </script>
