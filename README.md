@@ -2,6 +2,16 @@
 
 [앱 열기](https://nyk5473.github.io/MuBoxing_AddUp/)
 
+## 눈사람 악기 레퍼런스
+
+제공받은 로컬 M4A를 6개 소스로 분리한 뒤, 각 구간의 신호 크기와 오디오 분류 결과를 비교했습니다.
+기타와 베이스 기타는 두 결과가 일치한 부분에 표시했습니다. 드럼과 신스 계열은 분류가
+불확실해 지도에 **추정**으로 표기했습니다. 독립된 FX는 확인할 근거가 부족해 비워뒀습니다.
+사용자가 칸을 수정하면 내용은 해당 브라우저의 localStorage에 저장됩니다. 원본 오디오와
+분리된 오디오 파일은 저장소에 포함하지 않습니다. 사용한 모델은
+[Demucs htdemucs_6s](https://github.com/facebookresearch/demucs#available-models)와
+[Audio Spectrogram Transformer](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)입니다.
+
 ## 오디오 분석 서버
 
 GitHub Pages는 정적 파일만 게시합니다. `server/main.py`는 업로드한 오디오를 받아

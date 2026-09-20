@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 .muboxing-testdeps/
 .analysis-deps/
+.analysis-output/

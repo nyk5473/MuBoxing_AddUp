@@ -1165,6 +1165,15 @@ const SNOWMAN_VOCAL_CUES = [
   '', '멀리 배웅하던 길', '아무 노력 말아요', '꽃잎이 번지면',
   '그 다음 말은 이젠', '꽃잎이 번지면', '끝 눈이 와요', '마지막으로 날',
 ];
+// Local Demucs 6-stem separation, checked against AudioSet AST tags.
+// Uncertain instruments stay qualified; FX stays empty without clear evidence.
+const SNOWMAN_INSTRUMENT_CUES = {
+  Drums: ['도입 타격음 (추정)', '', '', '', '', '간헐적 드럼 (추정)', '간헐적 타격음 (추정)', ''],
+  Bass: ['', '', '', '', '', '후반 베이스 기타', '베이스 기타', '베이스 기타'],
+  Synth: ['오르간/신스 계열 (추정)', '', '', '오르간/신스 계열 (추정)', '', '건반 계열 (추정)', '스트링/패드 계열 (추정)', '신스 계열 잔향 (추정)'],
+  Guitar: ['기타 계열', '기타 계열', '기타 계열', '기타 계열', '기타 계열', '전반 기타 계열', '후반 기타 계열', '기타 계열'],
+  FX: ['', '', '', '', '', '', '', ''],
+};
 const SNOWMAN_NOTES_KEY = 'muboxing_snowman_instruments_v2';
 
 function getSnowmanNotes(){
@@ -1190,7 +1199,7 @@ function getSnowmanTracks(){
     ...lane,
     segs: snowmanAnalysis.data.sections.map((section, index) => ({
       s:section.start, e:section.end,
-      label:notes[lane.name + ':' + index] ?? (lane.name === 'Vocal' ? SNOWMAN_VOCAL_CUES[index] : ''),
+      label:notes[lane.name + ':' + index] ?? (lane.name === 'Vocal' ? SNOWMAN_VOCAL_CUES[index] : SNOWMAN_INSTRUMENT_CUES[lane.name][index]),
       editable:true, section:section.label, lane:lane.name, index,
     })),
   }));
@@ -1287,7 +1296,7 @@ function setSongData(songId){
   buildHarmonyAndFreq(songId);
   buildGrooveAndSpectrum(songId);
   if(songId === 'snowman') document.getElementById('interNoteBox').textContent =
-    '칸을 눌러 구간별로 확인한 소리를 기록할 수 있어요. 입력 내용은 이 브라우저에 저장됩니다. 빈칸은 아직 기록된 악기가 없다는 뜻입니다.';
+    '기타·베이스는 오디오 분리와 소리 분류 결과가 일치한 구간에 표시했습니다. 드럼·신스는 추정 표기이며, FX는 독립된 소리를 확인할 근거가 부족해 비워뒀습니다. 칸을 누르면 직접 수정할 수 있고 이 브라우저에 저장됩니다.';
 }
 
 let currentSong = null;
@@ -1324,10 +1333,10 @@ function selectSong(songId){
     document.getElementById(id).style.display = songId === 'snowman' ? 'none' : '';
   });
   document.getElementById('interNoteBox').textContent = songId === 'snowman'
-    ? '구간별 악기 칸을 눌러 들리는 소리를 기록할 수 있어요. 입력 내용은 이 브라우저에 저장됩니다. 빈칸은 해당 구간의 소리를 확인하지 않았거나 기록할 악기가 없다는 뜻입니다.'
+    ? '기타·베이스는 오디오 분리와 소리 분류 결과가 일치한 구간에 표시했습니다. 드럼·신스는 추정 표기이며 FX는 확인할 근거가 부족해 비워뒀습니다. 칸을 눌러 수정하면 이 브라우저에 저장됩니다.'
     : (harmonyData[songId]?.noteText || '');
   document.getElementById('analysisFooter').textContent = songId === 'snowman'
-    ? '제공해 주신 가사 순서와 각 구간의 첫 구절을 Vocal 행에 표시했습니다. Intro 00:00~00:29 외 시작 시각은 추정입니다. 확인되지 않은 악기 칸은 비워뒀습니다.'
+    ? '오디오 분리 결과로 악기 후보를 채웠습니다. “추정” 표기는 악기 종류가 확실하지 않은 부분입니다. FX는 독립된 소리를 확인하지 못해 비웠습니다. Intro 00:00~00:29 외 섹션 시작 시각은 추정입니다.'
     : measured
       ? '8초 단위로 실제 음원의 에너지와 주파수 분포를 측정했습니다. 악기·보컬·코드 분석은 제공하지 않습니다.'
       : '구간 길이는 BPM 기준으로 보정한 값이에요. 상단 섹션을 클릭하면 해당 구간으로 이동합니다.';
