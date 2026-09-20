@@ -49,6 +49,28 @@ class VideoAnalysisTests(unittest.TestCase):
         self.assertEqual(len(result["data"]["tracks"]), 5)
         self.assertFalse(downloaded[0].exists())
 
+    def test_long_video_is_rejected_before_download(self):
+        class FakeDownloader:
+            def __init__(self, options):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                pass
+
+            def extract_info(self, url, download):
+                if download:
+                    raise AssertionError("download was attempted")
+                return {"duration": 601}
+
+        with patch("server.main.yt_dlp.YoutubeDL", FakeDownloader):
+            with self.assertRaises(HTTPException) as error:
+                analyze_video("M7lc1UVf-VE")
+        self.assertEqual(error.exception.status_code, 422)
+        self.assertIn("10분", error.exception.detail)
+
 
 if __name__ == "__main__":
     unittest.main()

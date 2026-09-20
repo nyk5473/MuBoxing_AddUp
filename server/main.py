@@ -160,11 +160,6 @@ def analyze_video(video_id: str) -> dict:
         raise HTTPException(400, "올바른 유튜브 영상 ID가 아닙니다.")
     url = f"https://www.youtube.com/watch?v={video_id}"
 
-    def limit_duration(info, *, incomplete):
-        duration = info.get("duration")
-        if duration and duration > 600:
-            return "10분 이하 영상만 분석할 수 있습니다."
-
     def limit_download(progress):
         if progress.get("downloaded_bytes", 0) > MAX_BYTES:
             raise yt_dlp.utils.DownloadError("오디오가 50MB를 초과했습니다.")
@@ -175,7 +170,6 @@ def analyze_video(video_id: str) -> dict:
             "outtmpl": str(Path(temp_dir) / "audio.%(ext)s"),
             "noplaylist": True,
             "max_filesize": MAX_BYTES,
-            "match_filter": limit_duration,
             "progress_hooks": [limit_download],
             "socket_timeout": 15,
             "retries": 1,
@@ -186,6 +180,11 @@ def analyze_video(video_id: str) -> dict:
         }
         try:
             with yt_dlp.YoutubeDL(options) as downloader:
+                metadata = downloader.extract_info(url, download=False)
+                if not metadata:
+                    raise HTTPException(422, "영상 정보를 읽을 수 없습니다.")
+                if metadata.get("duration") and metadata["duration"] > 600:
+                    raise HTTPException(422, "10분 이하 영상만 분석할 수 있습니다.")
                 info = downloader.extract_info(url, download=True)
                 if not info:
                     raise HTTPException(422, "이 영상의 오디오를 가져올 수 없습니다.")
